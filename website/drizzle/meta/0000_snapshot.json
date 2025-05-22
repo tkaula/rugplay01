@@ -1,5 +1,5 @@
 {
-  "id": "c69a25a2-291e-48c8-847d-6d39c4251cab",
+  "id": "d8f103f7-02e7-4506-95a5-4993abe53030",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -10,7 +10,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "serial",
           "primaryKey": true,
           "notNull": true
         },
@@ -28,7 +28,7 @@
         },
         "user_id": {
           "name": "user_id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -132,9 +132,9 @@
         },
         "creator_id": {
           "name": "creator_id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "initial_supply": {
           "name": "initial_supply",
@@ -292,7 +292,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "serial",
           "primaryKey": true,
           "notNull": true
         },
@@ -336,7 +336,7 @@
         },
         "user_id": {
           "name": "user_id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         }
@@ -380,7 +380,7 @@
         },
         "user_id": {
           "name": "user_id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -551,7 +551,7 @@
       "columns": {
         "user_id": {
           "name": "user_id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -621,7 +621,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "serial",
           "primaryKey": true,
           "notNull": true
         },

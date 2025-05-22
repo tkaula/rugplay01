@@ -1,10 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { apiKey } from "better-auth/plugins";
 import { env } from '$env/dynamic/private';
-
 import { db } from "./server/db";
-import { eq } from "drizzle-orm";
 
 if (!env.GOOGLE_CLIENT_ID) throw new Error('GOOGLE_CLIENT_ID is not set');
 if (!env.GOOGLE_CLIENT_SECRET) throw new Error('GOOGLE_CLIENT_SECRET is not set');
@@ -53,4 +50,7 @@ export const auth = betterAuth({
         },
         deleteUser: { enabled: true }
     },
+    advanced: {
+        generateId: false,
+    }
 });
