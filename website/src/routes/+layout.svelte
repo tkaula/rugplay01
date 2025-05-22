@@ -7,6 +7,7 @@
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { ModeWatcher } from 'mode-watcher';
 
 	let { data, children } = $props<{
 		data: { userSession?: any };
@@ -67,6 +68,8 @@
 		}
 	});
 </script>
+
+<ModeWatcher />
 
 <Sidebar.Provider>
 	<AppSidebar />
