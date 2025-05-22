@@ -1,23 +1,29 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as Avatar from '$lib/components/ui/avatar';
 	import {
 		Moon,
 		Sun,
-		PenSquare,
 		ShieldAlert,
 		Home,
 		Store,
 		BriefcaseBusiness,
-		Coins
+		Coins,
+		ChevronsUpDownIcon,
+		SparklesIcon,
+		BadgeCheckIcon,
+		CreditCardIcon,
+		BellIcon,
+		LogOutIcon
 	} from 'lucide-svelte';
 	import { mode, setMode } from 'mode-watcher';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import Button from '../ui/button/button.svelte';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
-	import { signIn } from '$lib/auth-client';
-	import { page } from '$app/state';
+
 	import SignInConfirmDialog from './SignInConfirmDialog.svelte';
+	import { signOut } from '$lib/auth-client';
 
 	const data = {
 		navMain: [
@@ -30,19 +36,11 @@
 	};
 	type MenuButtonProps = HTMLAttributes<HTMLAnchorElement | HTMLButtonElement>;
 
-	const { setOpenMobile } = useSidebar();
+	const { setOpenMobile, isMobile } = useSidebar();
 	let shouldSignIn = $state(false);
 
 	function handleNavClick(title: string) {
 		setOpenMobile(false);
-	}
-
-	async function handleSignIn() {
-		console.log("callbackL ", `${page.url.pathname}?signIn=1`);
-		await signIn.social({
-			provider: 'google',
-			callbackURL: `${page.url.pathname}?signIn=1`
-		});
 	}
 
 	function handleModeToggle() {
@@ -51,7 +49,7 @@
 	}
 </script>
 
-<SignInConfirmDialog bind:open={shouldSignIn} onConfirm={handleSignIn} />
+<SignInConfirmDialog bind:open={shouldSignIn} />
 <Sidebar.Root collapsible="offcanvas">
 	<Sidebar.Header>
 		<div class="flex items-center gap-1 px-2 py-2">
@@ -120,21 +118,92 @@
 							{/snippet}
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
-
-					{#if !$USER_DATA}
-						<Sidebar.MenuItem>
-							<Sidebar.MenuButton>
-								{#snippet child()}
-									<Button onclick={() => shouldSignIn = !shouldSignIn} class={`mb-4 h-[3.0rem] w-36 cursor-pointer`}>
-										<PenSquare />
-										<span>Sign in</span>
-									</Button>
-								{/snippet}
-							</Sidebar.MenuButton>
-						</Sidebar.MenuItem>
-					{/if}
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
 		</Sidebar.Group>
 	</Sidebar.Content>
+
+	{#if $USER_DATA}
+		<Sidebar.Footer>
+			<Sidebar.Menu>
+				<Sidebar.MenuItem>
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<Sidebar.MenuButton
+									size="lg"
+									class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+									{...props}
+								>
+									<Avatar.Root class="size-8 rounded-lg">
+										<Avatar.Image src={$USER_DATA.image} alt={$USER_DATA.name} />
+										<Avatar.Fallback class="rounded-lg">CN</Avatar.Fallback>
+									</Avatar.Root>
+									<div class="grid flex-1 text-left text-sm leading-tight">
+										<span class="truncate font-medium">{$USER_DATA.name}</span>
+										<span class="truncate text-xs">$35,674.34</span>
+										<!-- TODO: replace with actual db entry -->
+									</div>
+									<ChevronsUpDownIcon class="ml-auto size-4" />
+								</Sidebar.MenuButton>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content
+							class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg"
+							side={isMobile ? 'bottom' : 'right'}
+							align="end"
+							sideOffset={4}
+						>
+							<DropdownMenu.Label class="p-0 font-normal">
+								<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+									<Avatar.Root class="size-8 rounded-lg">
+										<Avatar.Image src={$USER_DATA.image} alt={$USER_DATA.name} />
+										<Avatar.Fallback class="rounded-lg">CN</Avatar.Fallback>
+									</Avatar.Root>
+									<div class="grid flex-1 text-left text-sm leading-tight">
+										<span class="truncate font-medium">{$USER_DATA.name}</span>
+										<span class="truncate text-xs">{$USER_DATA.email}</span>
+									</div>
+								</div>
+							</DropdownMenu.Label>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Group>
+								<DropdownMenu.Item disabled={true}>
+									<SparklesIcon />
+									Upgrade to Pro
+								</DropdownMenu.Item>
+							</DropdownMenu.Group>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Group>
+								<DropdownMenu.Item>
+									<BadgeCheckIcon />
+									Account
+								</DropdownMenu.Item>
+								<DropdownMenu.Item disabled={true}>
+									<CreditCardIcon />
+									Billing
+								</DropdownMenu.Item>
+								<DropdownMenu.Item disabled={true}>
+									<BellIcon />
+									Notifications
+								</DropdownMenu.Item>
+							</DropdownMenu.Group>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item
+								onclick={() => {
+									signOut().then(() => {
+										USER_DATA.set(null);
+										window.location.reload();
+									});
+								}}
+							>
+								<LogOutIcon />
+								Log out
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				</Sidebar.MenuItem>
+			</Sidebar.Menu>
+		</Sidebar.Footer>
+	{/if}
 </Sidebar.Root>

@@ -60,8 +60,8 @@
 		);
 
 		const url = new URL(window.location.href);
-		if (url.searchParams.has('signedIn')) {
-			url.searchParams.delete('signedIn');
+		if (url.searchParams.has('signIn')) {
+			url.searchParams.delete('signIn');
 			window.history.replaceState({}, '', url);
 			invalidateAll();
 		}

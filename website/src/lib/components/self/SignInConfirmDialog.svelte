@@ -7,17 +7,25 @@
 		DialogDescription
 	} from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
+	import { signIn } from '$lib/auth-client';
+	import { page } from '$app/state';
 
-	let { open = $bindable(false), onConfirm } = $props<{
+	async function onConfirm() {
+		await signIn.social({
+			provider: 'google',
+			callbackURL: `${page.url.pathname}?signIn=1`
+		});
+	}
+
+	let { open = $bindable(false) } = $props<{
 		open?: boolean;
-		onConfirm: (provider: 'google') => void;
 	}>();
 </script>
 
 <Dialog bind:open>
 	<DialogContent class="sm:max-w-md">
 		<DialogHeader>
-			<DialogTitle>Sign in to Vyntr</DialogTitle>
+			<DialogTitle>Sign in to Rugplay</DialogTitle>
 			<DialogDescription>
 				Choose a service to sign in with. Your account will be created automatically if you don't
 				have one.
@@ -27,7 +35,7 @@
 			<Button
 				class="flex w-full items-center justify-center gap-2"
 				variant="outline"
-				onclick={() => onConfirm('google')}
+				onclick={() => onConfirm()}
 			>
 				<img
 					class="h-5 w-5"

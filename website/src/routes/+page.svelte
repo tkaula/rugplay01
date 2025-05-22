@@ -3,12 +3,35 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
+	import { getTimeBasedGreeting } from '$lib/utils';
+	import { USER_DATA } from '$lib/stores/user-data';
+	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
+
+	let shouldSignIn = $state(false);
 </script>
+
+<SignInConfirmDialog bind:open={shouldSignIn} />
 
 <div class="container mx-auto p-6">
 	<header class="mb-8">
-		<h1 class="mb-2 text-4xl font-bold">Rugplay</h1>
-		<p class="text-muted-foreground">A trading simulator</p>
+		<h1 class="mb-2 text-3xl font-bold">
+			{$USER_DATA ? getTimeBasedGreeting($USER_DATA?.name) : 'Welcome to Rugplay!'}
+		</h1>
+		<p class="text-muted-foreground">
+			{#if $USER_DATA}
+				Here's the market overview for today.
+			{:else}
+				You need to <button
+					class="text-primary underline hover:cursor-pointer"
+					onclick={() => (shouldSignIn = !shouldSignIn)}>sign in</button
+				>
+				or{' '}
+				<button
+					class="text-primary underline hover:cursor-pointer"
+					onclick={() => (shouldSignIn = !shouldSignIn)}>create an account</button
+				> to play.
+			{/if}
+		</p>
 	</header>
 
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
