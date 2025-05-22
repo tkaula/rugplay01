@@ -149,7 +149,7 @@
 							{/snippet}
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Content
-							class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg"
+							class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg p-2"
 							side={isMobile ? 'bottom' : 'right'}
 							align="end"
 							sideOffset={4}
