@@ -2,9 +2,10 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
-	import { getTimeBasedGreeting, getPublicUrl } from '$lib/utils';
+	import { getTimeBasedGreeting } from '$lib/utils';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
+	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -91,17 +92,11 @@
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{#each coins.slice(0, 6) as coin}
 				<a href={`/coin/${coin.symbol}`} class="block">
-					<Card.Root class="hover:bg-card/50 h-full transition-shadow hover:shadow-md transition-all">
+					<Card.Root class="hover:bg-card/50 h-full transition-all hover:shadow-md">
 						<Card.Header>
 							<Card.Title class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
-									{#if coin.icon}
-										<img
-											src={getPublicUrl(coin.icon)}
-											alt={coin.name}
-											class="h-6 w-6 rounded-full"
-										/>
-									{/if}
+									<CoinIcon icon={coin.icon} symbol={coin.symbol} name={coin.name} size={6} />
 									<span>{coin.name} (*{coin.symbol})</span>
 								</div>
 								<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'} class="ml-2">
@@ -145,13 +140,7 @@
 											href={`/coin/${coin.symbol}`}
 											class="flex items-center gap-2 hover:underline"
 										>
-											{#if coin.icon}
-												<img
-													src={getPublicUrl(coin.icon)}
-													alt={coin.name}
-													class="h-4 w-4 rounded-full"
-												/>
-											{/if}
+											<CoinIcon icon={coin.icon} symbol={coin.symbol} name={coin.name} size={4} />
 											{coin.name} <span class="text-muted-foreground">(*{coin.symbol})</span>
 										</a>
 									</Table.Cell>

@@ -5,9 +5,7 @@ import { user, userPortfolio, coin } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET({ request }) {
-    const session = await auth.api.getSession({
-        headers: request.headers
-    });
+    const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session?.user) {
         throw error(401, 'Not authenticated');
@@ -15,27 +13,30 @@ export async function GET({ request }) {
 
     const userId = Number(session.user.id);
 
-    const [userData] = await db
-        .select({ baseCurrencyBalance: user.baseCurrencyBalance })
-        .from(user)
-        .where(eq(user.id, userId))
-        .limit(1);
+    const [userData, holdings] = await Promise.all([
+        db.select({ baseCurrencyBalance: user.baseCurrencyBalance })
+            .from(user)
+            .where(eq(user.id, userId))
+            .limit(1),
 
-    if (!userData) {
+        db.select({
+            quantity: userPortfolio.quantity,
+            currentPrice: coin.currentPrice,
+            symbol: coin.symbol,
+            icon: coin.icon,
+            change24h: coin.change24h
+        })
+            .from(userPortfolio)
+            .innerJoin(coin, eq(userPortfolio.coinId, coin.id))
+            .where(eq(userPortfolio.userId, userId))
+    ]);
+
+    if (!userData[0]) {
         throw error(404, 'User not found');
     }
 
-    const holdings = await db
-        .select({
-            quantity: userPortfolio.quantity,
-            currentPrice: coin.currentPrice,
-            symbol: coin.symbol
-        })
-        .from(userPortfolio)
-        .innerJoin(coin, eq(userPortfolio.coinId, coin.id))
-        .where(eq(userPortfolio.userId, userId));
-
     let totalCoinValue = 0;
+
     const coinHoldings = holdings.map(holding => {
         const quantity = Number(holding.quantity);
         const price = Number(holding.currentPrice);
@@ -44,13 +45,15 @@ export async function GET({ request }) {
 
         return {
             symbol: holding.symbol,
+            icon: holding.icon,
             quantity,
             currentPrice: price,
-            value
+            value,
+            change24h: Number(holding.change24h)
         };
     });
 
-    const baseCurrencyBalance = Number(userData.baseCurrencyBalance);
+    const baseCurrencyBalance = Number(userData[0].baseCurrencyBalance);
 
     return json({
         baseCurrencyBalance,

@@ -1,7 +1,7 @@
 import { auth } from '$lib/auth';
 import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { coin, userPortfolio, user, priceHistory } from '$lib/server/db/schema';
+import { coin, userPortfolio, user, priceHistory, transaction } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { uploadCoinIcon } from '$lib/server/s3';
 import { CREATION_FEE, FIXED_SUPPLY, STARTING_PRICE, INITIAL_LIQUIDITY, TOTAL_COST, MAX_FILE_SIZE } from '$lib/data/constants';
@@ -124,6 +124,15 @@ export async function POST({ request }) {
         await tx.insert(priceHistory).values({
             coinId: newCoin.id,
             price: STARTING_PRICE.toString()
+        });
+
+        await tx.insert(transaction).values({
+            userId,
+            coinId: newCoin.id,
+            type: 'BUY',
+            quantity: FIXED_SUPPLY.toString(),
+            pricePerCoin: STARTING_PRICE.toString(),
+            totalBaseCurrencyAmount: (FIXED_SUPPLY * STARTING_PRICE).toString()
         });
     });
 

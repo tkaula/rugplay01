@@ -10,6 +10,8 @@ export type User = {
     isBanned: boolean;
     banReason: string | null;
     avatarUrl: string | null;
+
+    baseCurrencyBalance: number;
     bio: string;
 } | null;
 

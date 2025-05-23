@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as HoverCard from '$lib/components/ui/hover-card';
+	import TradeModal from '$lib/components/self/TradeModal.svelte';
 	import {
 		TrendingUp,
 		TrendingDown,
@@ -17,39 +18,47 @@
 		ColorType,
 		type Time,
 		type IChartApi,
-		CandlestickSeries
+		CandlestickSeries,
+		HistogramSeries
 	} from 'lightweight-charts';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getPublicUrl } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
+	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
+	import { USER_DATA } from '$lib/stores/user-data';
+	import { fetchPortfolioData } from '$lib/stores/portfolio-data';
 
 	const { data } = $props();
 	const coinSymbol = data.coinSymbol;
 
 	let coin = $state<any>(null);
-	let priceHistory = $state<any[]>([]);
 	let loading = $state(true);
 	let creatorImageUrl = $state<string | null>(null);
 	let chartData = $state<any[]>([]);
+	let volumeData = $state<any[]>([]);
+	let userHolding = $state(0);
+	let buyModalOpen = $state(false);
+	let sellModalOpen = $state(false);
+	let selectedTimeframe = $state('1m');
 
 	onMount(async () => {
+		await loadCoinData();
+		await loadUserHolding();
+	});
+
+	async function loadCoinData() {
 		try {
-			const response = await fetch(`/api/coin/${coinSymbol}`);
+			const response = await fetch(`/api/coin/${coinSymbol}?timeframe=${selectedTimeframe}`);
 
 			if (!response.ok) {
-				if (response.status === 404) {
-					toast.error('Coin not found');
-				} else {
-					toast.error('Failed to load coin data');
-				}
+				toast.error(response.status === 404 ? 'Coin not found' : 'Failed to load coin data');
 				return;
 			}
 
 			const result = await response.json();
 			coin = result.coin;
-			priceHistory = result.priceHistory;
-			chartData = generateCandlesticksFromHistory(priceHistory);
+			chartData = result.candlestickData || [];
+			volumeData = result.volumeData || [];
 
 			if (coin.creatorId) {
 				try {
@@ -66,90 +75,143 @@
 		} finally {
 			loading = false;
 		}
-	});
+	}
 
-	function generateCandlesticksFromHistory(history: any[]) {
-		const dailyData = new Map();
+	async function loadUserHolding() {
+		if (!$USER_DATA) return;
 
-		history.forEach((p) => {
-			const date = new Date(p.timestamp);
-			const dayKey = Math.floor(date.getTime() / (24 * 60 * 60 * 1000));
-
-			if (!dailyData.has(dayKey)) {
-				dailyData.set(dayKey, {
-					time: dayKey * 24 * 60 * 60,
-					open: p.price,
-					high: p.price,
-					low: p.price,
-					close: p.price,
-					prices: [p.price]
-				});
-			} else {
-				const dayData = dailyData.get(dayKey);
-				dayData.high = Math.max(dayData.high, p.price);
-				dayData.low = Math.min(dayData.low, p.price);
-				dayData.close = p.price;
-				dayData.prices.push(p.price);
+		try {
+			const response = await fetch('/api/portfolio/total');
+			if (response.ok) {
+				const result = await response.json();
+				const holding = result.coinHoldings.find((h: any) => h.symbol === coinSymbol.toUpperCase());
+				userHolding = holding ? holding.quantity : 0;
 			}
-		});
+		} catch (e) {
+			console.error('Failed to load user holding:', e);
+		}
+	}
 
-		return Array.from(dailyData.values())
-			.map((d) => ({
-				time: d.time as Time,
-				open: d.open,
-				high: d.high,
-				low: d.low,
-				close: d.close
-			}))
-			.sort((a, b) => (a.time as number) - (b.time as number));
+	async function handleTradeSuccess() {
+		await Promise.all([loadCoinData(), loadUserHolding(), fetchPortfolioData()]);
+	}
+
+	async function handleTimeframeChange(timeframe: string) {
+		selectedTimeframe = timeframe;
+		loading = true;
+
+		if (chart) {
+			chart.remove();
+			chart = null;
+		}
+
+		await loadCoinData();
+		loading = false;
+	}
+
+	function generateVolumeData(candlestickData: any[], volumeData: any[]) {
+		return candlestickData.map((candle, index) => {
+			// Find corresponding volume data for this time period
+			const volumePoint = volumeData.find(v => v.time === candle.time);
+			const volume = volumePoint ? volumePoint.volume : 0;
+
+			return {
+				time: candle.time,
+				value: volume,
+				color: candle.close >= candle.open ? '#26a69a' : '#ef5350'
+			};
+		});
 	}
 
 	let chartContainer = $state<HTMLDivElement>();
 	let chart: IChartApi | null = null;
 
 	$effect(() => {
-		if (chartContainer && chartData.length > 0 && !chart) {
+		if (chart && chartData.length > 0) {
+			chart.remove();
+			chart = null;
+		}
+
+		if (chartContainer && chartData.length > 0) {
 			chart = createChart(chartContainer, {
 				layout: {
 					textColor: '#666666',
 					background: { type: ColorType.Solid, color: 'transparent' },
-					attributionLogo: false
+					attributionLogo: false,
+					panes: {
+						separatorColor: '#2B2B43',
+						separatorHoverColor: 'rgba(107, 114, 142, 0.3)',
+						enableResize: true
+					}
 				},
 				grid: {
 					vertLines: { color: '#2B2B43' },
 					horzLines: { color: '#2B2B43' }
 				},
 				rightPriceScale: {
-					borderVisible: false
+					borderVisible: false,
+					scaleMargins: { top: 0.1, bottom: 0.1 },
+					alignLabels: true,
+					entireTextOnly: false
 				},
 				timeScale: {
 					borderVisible: false,
-					timeVisible: true
+					timeVisible: true,
+					barSpacing: 20,
+					rightOffset: 5,
+					minBarSpacing: 8
 				},
 				crosshair: {
-					mode: 1
+					mode: 1,
+					vertLine: { color: '#758696', width: 1, style: 2, visible: true, labelVisible: true },
+					horzLine: { color: '#758696', width: 1, style: 2, visible: true, labelVisible: true }
 				}
 			});
 
 			const candlestickSeries = chart.addSeries(CandlestickSeries, {
 				upColor: '#26a69a',
 				downColor: '#ef5350',
-				borderVisible: false,
+				borderVisible: true,
+				borderUpColor: '#26a69a',
+				borderDownColor: '#ef5350',
 				wickUpColor: '#26a69a',
-				wickDownColor: '#ef5350'
+				wickDownColor: '#ef5350',
+				priceFormat: { type: 'price', precision: 8, minMove: 0.00000001 }
 			});
 
-			candlestickSeries.setData(chartData);
+			const volumeSeries = chart.addSeries(HistogramSeries, {
+				priceFormat: { type: 'volume' },
+				priceScaleId: 'volume'
+			}, 1);
+
+			const processedChartData = chartData.map((candle) => {
+				if (candle.open === candle.close) {
+					const basePrice = candle.open;
+					const variation = basePrice * 0.001;
+					return {
+						...candle,
+						high: Math.max(candle.high, basePrice + variation),
+						low: Math.min(candle.low, basePrice - variation)
+					};
+				}
+				return candle;
+			});
+
+			candlestickSeries.setData(processedChartData);
+			volumeSeries.setData(generateVolumeData(chartData, volumeData));
+
+			const volumePane = chart.panes()[1];
+			if (volumePane) volumePane.setHeight(100);
+
 			chart.timeScale().fitContent();
 
-			const handleResize = () => {
-				chart?.applyOptions({
-					width: chartContainer?.clientWidth
-				});
-			};
-
+			const handleResize = () => chart?.applyOptions({ width: chartContainer?.clientWidth });
 			window.addEventListener('resize', handleResize);
 			handleResize();
+
+			candlestickSeries.priceScale().applyOptions({ borderColor: '#71649C' });
+			volumeSeries.priceScale().applyOptions({ borderColor: '#71649C' });
+			chart.timeScale().applyOptions({ borderColor: '#71649C' });
 
 			return () => {
 				window.removeEventListener('resize', handleResize);
@@ -190,6 +252,17 @@
 	<title>{coin ? `${coin.name} (${coin.symbol})` : 'Loading...'} - Rugplay</title>
 </svelte:head>
 
+{#if coin}
+	<TradeModal bind:open={buyModalOpen} type="BUY" {coin} onSuccess={handleTradeSuccess} />
+	<TradeModal
+		bind:open={sellModalOpen}
+		type="SELL"
+		{coin}
+		{userHolding}
+		onSuccess={handleTradeSuccess}
+	/>
+{/if}
+
 {#if loading}
 	<div class="container mx-auto max-w-7xl p-6">
 		<div class="flex h-96 items-center justify-center">
@@ -213,23 +286,13 @@
 		<header class="mb-8">
 			<div class="mb-4 flex items-start justify-between">
 				<div class="flex items-center gap-4">
-					<div
-						class="bg-muted/50 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border"
-					>
-						{#if coin.icon}
-							<img
-								src={getPublicUrl(coin.icon)}
-								alt={coin.name}
-								class="h-full w-full object-cover"
-							/>
-						{:else}
-							<div
-								class="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-xl font-bold text-white"
-							>
-								{coin.symbol.slice(0, 2)}
-							</div>
-						{/if}
-					</div>
+					<CoinIcon
+						icon={coin.icon}
+						symbol={coin.symbol}
+						name={coin.name}
+						size={16}
+						class="border"
+					/>
 					<div>
 						<h1 class="text-4xl font-bold">{coin.name}</h1>
 						<div class="mt-1 flex items-center gap-2">
@@ -309,13 +372,33 @@
 				<div class="lg:col-span-2">
 					<Card.Root>
 						<Card.Header class="pb-4">
-							<Card.Title class="flex items-center gap-2">
-								<ChartColumn class="h-5 w-5" />
-								Price Chart
-							</Card.Title>
+							<div class="flex items-center justify-between">
+								<Card.Title class="flex items-center gap-2">
+									<ChartColumn class="h-5 w-5" />
+									Price Chart ({selectedTimeframe})
+								</Card.Title>
+								<div class="flex gap-1">
+									{#each ['1m', '5m', '15m', '1h', '4h', '1d'] as timeframe}
+										<Button
+											variant={selectedTimeframe === timeframe ? 'default' : 'outline'}
+											size="sm"
+											onclick={() => handleTimeframeChange(timeframe)}
+											disabled={loading}
+										>
+											{timeframe}
+										</Button>
+									{/each}
+								</div>
+							</div>
 						</Card.Header>
 						<Card.Content class="pt-0">
-							<div class="h-[400px] w-full" bind:this={chartContainer}></div>
+							{#if chartData.length === 0}
+								<div class="flex h-[500px] items-center justify-center">
+									<p class="text-muted-foreground">No trading data available yet</p>
+								</div>
+							{:else}
+								<div class="h-[500px] w-full" bind:this={chartContainer}></div>
+							{/if}
 						</Card.Content>
 					</Card.Root>
 				</div>
@@ -326,18 +409,43 @@
 					<Card.Root>
 						<Card.Header class="pb-4">
 							<Card.Title>Trade {coin.symbol}</Card.Title>
+							{#if userHolding > 0}
+								<p class="text-muted-foreground text-sm">
+									You own: {userHolding.toFixed(2)}
+									{coin.symbol}
+								</p>
+							{/if}
 						</Card.Header>
 						<Card.Content class="pt-0">
-							<div class="space-y-3">
-								<Button class="w-full" variant="default" size="lg">
-									<TrendingUp class="mr-2 h-4 w-4" />
-									Buy {coin.symbol}
-								</Button>
-								<Button class="w-full" variant="outline" size="lg">
-									<TrendingDown class="mr-2 h-4 w-4" />
-									Sell {coin.symbol}
-								</Button>
-							</div>
+							{#if $USER_DATA}
+								<div class="space-y-3">
+									<Button
+										class="w-full"
+										variant="default"
+										size="lg"
+										onclick={() => (buyModalOpen = true)}
+										disabled={!coin.isListed}
+									>
+										<TrendingUp class="h-4 w-4" />
+										Buy {coin.symbol}
+									</Button>
+									<Button
+										class="w-full"
+										variant="outline"
+										size="lg"
+										onclick={() => (sellModalOpen = true)}
+										disabled={!coin.isListed || userHolding <= 0}
+									>
+										<TrendingDown class="h-4 w-4" />
+										Sell {coin.symbol}
+									</Button>
+								</div>
+							{:else}
+								<div class="py-4 text-center">
+									<p class="text-muted-foreground mb-3 text-sm">Sign in to start trading</p>
+									<Button onclick={() => goto('/')}>Sign In</Button>
+								</div>
+							{/if}
 						</Card.Content>
 					</Card.Root>
 

@@ -1,37 +1,38 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { coin } from '$lib/server/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 export async function GET() {
-    const topCoins = await db
-        .select({
-            id: coin.id,
-            name: coin.name,
-            symbol: coin.symbol,
-            icon: coin.icon,
-            currentPrice: coin.currentPrice,
-            marketCap: coin.marketCap,
-            volume24h: coin.volume24h,
-            change24h: coin.change24h,
-            isListed: coin.isListed
-        })
-        .from(coin)
-        .where(eq(coin.isListed, true))
-        .orderBy(desc(coin.marketCap))
-        .limit(20);
+    try {
+        const coins = await db
+            .select({
+                symbol: coin.symbol,
+                name: coin.name,
+                icon: coin.icon,
+                currentPrice: coin.currentPrice,
+                change24h: coin.change24h, // Read directly from DB
+                marketCap: coin.marketCap,
+                volume24h: coin.volume24h // Read directly from DB
+            })
+            .from(coin)
+            .where(eq(coin.isListed, true))
+            .orderBy(desc(coin.marketCap))
+            .limit(50);
 
-    return json({
-        coins: topCoins.map(c => ({
-            id: c.id,
-            name: c.name,
+        const formattedCoins = coins.map(c => ({
             symbol: c.symbol,
+            name: c.name,
             icon: c.icon,
             price: Number(c.currentPrice),
+            change24h: Number(c.change24h),
             marketCap: Number(c.marketCap),
-            volume24h: Number(c.volume24h || 0),
-            change24h: Number(c.change24h || 0),
-            isListed: c.isListed
-        }))
-    });
+            volume24h: Number(c.volume24h)
+        }));
+
+        return json({ coins: formattedCoins });
+    } catch (e) {
+        console.error('Error fetching top coins:', e);
+        return json({ coins: [] });
+    }
 }
