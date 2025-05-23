@@ -2,12 +2,15 @@
 	import '../app.css';
 
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { Toaster } from '$lib/components/ui/sonner';
+
 	import AppSidebar from '$lib/components/self/AppSidebar.svelte';
 
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { ModeWatcher } from 'mode-watcher';
+	import { page } from '$app/state';
 
 	let { data, children } = $props<{
 		data: { userSession?: any };
@@ -70,6 +73,7 @@
 </script>
 
 <ModeWatcher />
+<Toaster richColors={true} />
 
 <Sidebar.Provider>
 	<AppSidebar />
@@ -81,7 +85,13 @@
 			<div class="flex w-full items-center gap-4 px-4 lg:px-6">
 				<Sidebar.Trigger class="-ml-1" />
 
-				<h1 class="mr-6 text-base font-medium">test</h1>
+				<h1 class="mr-6 text-base font-medium">
+					{#if page.route.id === '/coin/create'}
+						Coin: Create
+					{:else}
+						test
+					{/if}
+				</h1>
 			</div>
 		</header>
 

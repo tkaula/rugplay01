@@ -1,13 +1,53 @@
 <script lang="ts">
-	import { coins } from '$lib/data/coins';
 	import * as Card from '$lib/components/ui/card';
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
-	import { getTimeBasedGreeting } from '$lib/utils';
+	import { getTimeBasedGreeting, getPublicUrl } from '$lib/utils';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
+	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	let shouldSignIn = $state(false);
+	let coins = $state<any[]>([]);
+	let loading = $state(true);
+
+	onMount(async () => {
+		try {
+			const response = await fetch('/api/coins/top');
+			if (response.ok) {
+				const result = await response.json();
+				coins = result.coins;
+			} else {
+				toast.error('Failed to load coins');
+			}
+		} catch (e) {
+			console.error('Failed to fetch coins:', e);
+			toast.error('Failed to load coins');
+		} finally {
+			loading = false;
+		}
+	});
+
+	function formatPrice(price: number): string {
+		if (price < 0.01) {
+			return price.toFixed(6);
+		} else if (price < 1) {
+			return price.toFixed(4);
+		} else {
+			return price.toLocaleString(undefined, {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			});
+		}
+	}
+
+	function formatMarketCap(value: number): string {
+		if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+		if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+		if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+		return `$${value.toFixed(2)}`;
+	}
 </script>
 
 <SignInConfirmDialog bind:open={shouldSignIn} />
@@ -34,83 +74,105 @@
 		</p>
 	</header>
 
-	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-		{#each coins as coin}
-			<a href={`/coin/${coin.symbol}`} class="block">
-				<Card.Root class="h-full transition-shadow hover:shadow-md">
-					<Card.Header>
-						<Card.Title class="flex items-center justify-between">
-							<span>{coin.name} ({coin.symbol})</span>
-							<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'} class="ml-2">
-								{coin.change24h >= 0 ? '+' : ''}{coin.change24h}%
-							</Badge>
-						</Card.Title>
-						<Card.Description
-							>Market Cap: ${(coin.marketCap / 1000000000).toFixed(2)}B</Card.Description
-						>
-					</Card.Header>
-					<Card.Content>
-						<div class="flex items-baseline justify-between">
-							<span class="text-3xl font-bold"
-								>${coin.price.toLocaleString(undefined, {
-									minimumFractionDigits: coin.price < 1 ? 3 : 2,
-									maximumFractionDigits: coin.price < 1 ? 3 : 2
-								})}</span
-							>
-							<span class="text-muted-foreground text-sm"
-								>24h Vol: ${(coin.volume24h / 1000000000).toFixed(2)}B</span
-							>
-						</div>
-					</Card.Content>
-				</Card.Root>
-			</a>
-		{/each}
-	</div>
+	{#if loading}
+		<div class="flex h-96 items-center justify-center">
+			<div class="text-center">
+				<div class="mb-4 text-xl">Loading market data...</div>
+			</div>
+		</div>
+	{:else if coins.length === 0}
+		<div class="flex h-96 items-center justify-center">
+			<div class="text-center">
+				<div class="text-muted-foreground mb-4 text-xl">No coins available</div>
+				<p class="text-muted-foreground text-sm">Be the first to create a coin!</p>
+			</div>
+		</div>
+	{:else}
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+			{#each coins.slice(0, 6) as coin}
+				<a href={`/coin/${coin.symbol}`} class="block">
+					<Card.Root class="h-full transition-shadow hover:shadow-md">
+						<Card.Header>
+							<Card.Title class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									{#if coin.icon}
+										<img
+											src={getPublicUrl(coin.icon)}
+											alt={coin.name}
+											class="h-6 w-6 rounded-full"
+										/>
+									{/if}
+									<span>{coin.name} (*{coin.symbol})</span>
+								</div>
+								<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'} class="ml-2">
+									{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
+								</Badge>
+							</Card.Title>
+							<Card.Description>Market Cap: {formatMarketCap(coin.marketCap)}</Card.Description>
+						</Card.Header>
+						<Card.Content>
+							<div class="flex items-baseline justify-between">
+								<span class="text-3xl font-bold">${formatPrice(coin.price)}</span>
+								<span class="text-muted-foreground text-sm">
+									24h Vol: {formatMarketCap(coin.volume24h)}
+								</span>
+							</div>
+						</Card.Content>
+					</Card.Root>
+				</a>
+			{/each}
+		</div>
 
-	<div class="mt-12">
-		<h2 class="mb-4 text-2xl font-bold">Market Overview</h2>
-		<Card.Root>
-			<Card.Content class="p-0">
-				<Table.Root>
-					<Table.Header>
-						<Table.Row>
-							<Table.Head>Name</Table.Head>
-							<Table.Head>Price</Table.Head>
-							<Table.Head>24h Change</Table.Head>
-							<Table.Head class="hidden md:table-cell">Market Cap</Table.Head>
-							<Table.Head class="hidden md:table-cell">Volume (24h)</Table.Head>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{#each coins as coin}
+		<div class="mt-12">
+			<h2 class="mb-4 text-2xl font-bold">Market Overview</h2>
+			<Card.Root>
+				<Card.Content class="p-0">
+					<Table.Root>
+						<Table.Header>
 							<Table.Row>
-								<Table.Cell class="font-medium">
-									<a href={`/coin/${coin.symbol}`} class="hover:underline">
-										{coin.name} <span class="text-muted-foreground">({coin.symbol})</span>
-									</a>
-								</Table.Cell>
-								<Table.Cell
-									>${coin.price.toLocaleString(undefined, {
-										minimumFractionDigits: coin.price < 1 ? 3 : 2,
-										maximumFractionDigits: coin.price < 1 ? 3 : 2
-									})}</Table.Cell
-								>
-								<Table.Cell>
-									<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'}>
-										{coin.change24h >= 0 ? '+' : ''}{coin.change24h}%
-									</Badge>
-								</Table.Cell>
-								<Table.Cell class="hidden md:table-cell"
-									>${(coin.marketCap / 1000000000).toFixed(2)}B</Table.Cell
-								>
-								<Table.Cell class="hidden md:table-cell"
-									>${(coin.volume24h / 1000000000).toFixed(2)}B</Table.Cell
-								>
+								<Table.Head>Name</Table.Head>
+								<Table.Head>Price</Table.Head>
+								<Table.Head>24h Change</Table.Head>
+								<Table.Head class="hidden md:table-cell">Market Cap</Table.Head>
+								<Table.Head class="hidden md:table-cell">Volume (24h)</Table.Head>
 							</Table.Row>
-						{/each}
-					</Table.Body>
-				</Table.Root>
-			</Card.Content>
-		</Card.Root>
-	</div>
+						</Table.Header>
+						<Table.Body>
+							{#each coins as coin}
+								<Table.Row>
+									<Table.Cell class="font-medium">
+										<a
+											href={`/coin/${coin.symbol}`}
+											class="flex items-center gap-2 hover:underline"
+										>
+											{#if coin.icon}
+												<img
+													src={getPublicUrl(coin.icon)}
+													alt={coin.name}
+													class="h-4 w-4 rounded-full"
+												/>
+											{/if}
+											{coin.name} <span class="text-muted-foreground">(*{coin.symbol})</span>
+										</a>
+									</Table.Cell>
+									<Table.Cell>${formatPrice(coin.price)}</Table.Cell>
+									<Table.Cell>
+										<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'}>
+											{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
+										</Badge>
+									</Table.Cell>
+									<Table.Cell class="hidden md:table-cell"
+										>{formatMarketCap(coin.marketCap)}</Table.Cell
+									>
+									<Table.Cell class="hidden md:table-cell"
+										>{formatMarketCap(coin.volume24h)}</Table.Cell
+									>
+								</Table.Row>
+							{/each}
+						</Table.Body>
+					</Table.Root>
+				</Card.Content>
+			</Card.Root>
+		</div>
+	{/if}
 </div>

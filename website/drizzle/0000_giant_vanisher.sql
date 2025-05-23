@@ -81,7 +81,10 @@ CREATE TABLE IF NOT EXISTS "user" (
 	"is_banned" boolean DEFAULT false,
 	"ban_reason" text,
 	"base_currency_balance" numeric(19, 4) DEFAULT '10000.0000' NOT NULL,
-	CONSTRAINT "user_email_unique" UNIQUE("email")
+	"bio" varchar(160) DEFAULT 'Hello am 48 year old man from somalia. Sorry for my bed england. I selled my wife for internet connection for play “conter stirk”',
+	"username" varchar(30) NOT NULL,
+	CONSTRAINT "user_email_unique" UNIQUE("email"),
+	CONSTRAINT "user_username_unique" UNIQUE("username")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_portfolio" (

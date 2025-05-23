@@ -1,0 +1,71 @@
+import { auth } from '$lib/auth';
+import { uploadProfilePicture } from '$lib/server/s3';
+import { error, json } from '@sveltejs/kit';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
+import { MAX_FILE_SIZE } from '$lib/data/constants';
+
+function validateInputs(name: string, bio: string, username: string, avatarFile: File | null) {
+    if (name && name.length < 1) {
+        throw error(400, 'Name cannot be empty');
+    }
+
+    if (bio && bio.length > 160) {
+        throw error(400, 'Bio must be 160 characters or less');
+    }
+
+    if (username && (username.length < 3 || username.length > 30)) {
+        throw error(400, 'Username must be between 3 and 30 characters');
+    }
+
+    if (avatarFile && avatarFile.size > MAX_FILE_SIZE) {
+        throw error(400, 'Avatar file must be smaller than 1MB');
+    }
+}
+
+export async function POST({ request }) {
+    const session = await auth.api.getSession({
+        headers: request.headers
+    });
+
+    if (!session?.user) {
+        throw error(401, 'Not authenticated');
+    }
+
+    const formData = await request.formData();
+    const name = formData.get('name') as string;
+    const bio = formData.get('bio') as string;
+    const username = formData.get('username') as string;
+    const avatarFile = formData.get('avatar') as File | null;
+
+    validateInputs(name, bio, username, avatarFile);
+
+    const updates: Record<string, any> = {
+        name,
+        bio,
+        username,
+        updatedAt: new Date()
+    };
+
+    if (avatarFile && avatarFile.size > 0) {
+        try {
+            const arrayBuffer = await avatarFile.arrayBuffer();
+            const key = await uploadProfilePicture(
+                session.user.id,
+                new Uint8Array(arrayBuffer),
+                avatarFile.type,
+                avatarFile.size
+            );
+            updates.image = key;
+        } catch (e) {
+            console.error('Avatar upload failed, continuing without update:', e);
+        }
+    }
+
+    await db.update(user)
+        .set(updates)
+        .where(eq(user.id, Number(session.user.id)));
+
+    return json({ success: true });
+}

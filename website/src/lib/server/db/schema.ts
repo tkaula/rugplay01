@@ -17,6 +17,8 @@ export const user = pgTable("user", {
 		precision: 19,
 		scale: 4,
 	}).notNull().default("10000.0000"), // 10,000 *BUSS
+	bio: varchar("bio", { length: 160 }).default("Hello am 48 year old man from somalia. Sorry for my bed england. I selled my wife for internet connection for play “conter stirk”"),
+	username: varchar("username", { length: 30 }).notNull().unique(),
 });
 
 export const session = pgTable("session", {
@@ -59,6 +61,7 @@ export const coin = pgTable("coin", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 255 }).notNull(),
 	symbol: varchar("symbol", { length: 10 }).notNull().unique(),
+	icon: text("icon"), // New field for coin icon
 	creatorId: integer("creator_id").references(() => user.id, { onDelete: "set null", }), // Coin can exist even if creator is deleted
 	initialSupply: decimal("initial_supply", { precision: 28, scale: 8 }).notNull(),
 	circulatingSupply: decimal("circulating_supply", { precision: 28, scale: 8 }).notNull(),

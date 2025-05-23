@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1747913743324,
-      "tag": "0000_romantic_firebrand",
+      "when": 1747924055062,
+      "tag": "0000_giant_vanisher",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1747991689472,
+      "tag": "0001_last_selene",
       "breakpoints": true
     }
   ]

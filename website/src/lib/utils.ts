@@ -1,3 +1,4 @@
+import { PUBLIC_B2_BUCKET, PUBLIC_B2_ENDPOINT } from "$env/static/public";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -24,4 +25,21 @@ export function getTimeBasedGreeting(name: string): string {
     } else {
         return `Good night, ${name}`;
     }
+}
+
+export function getPublicUrl(key: string | null): string | null {
+    if (!key) return null;
+    return `${PUBLIC_B2_ENDPOINT}/${PUBLIC_B2_BUCKET}/${key}`;
+}
+
+export function debounce(func: (...args: any[]) => void, wait: number) {
+    let timeout: number | undefined;
+    return function executedFunction(...args: any[]) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }

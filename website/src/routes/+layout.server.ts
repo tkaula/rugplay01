@@ -1,6 +1,4 @@
 import { auth } from '$lib/auth';
-import { db } from '$lib/server/db';
-import { eq } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
 import { dev } from '$app/environment';
 

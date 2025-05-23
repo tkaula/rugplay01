@@ -2,6 +2,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Avatar from '$lib/components/ui/avatar';
+	import { Badge } from '$lib/components/ui/badge';
 	import {
 		Moon,
 		Sun,
@@ -15,15 +16,19 @@
 		BadgeCheckIcon,
 		CreditCardIcon,
 		BellIcon,
-		LogOutIcon
+		LogOutIcon,
+		Wallet
 	} from 'lucide-svelte';
 	import { mode, setMode } from 'mode-watcher';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { USER_DATA } from '$lib/stores/user-data';
+	import { PORTFOLIO_DATA, fetchPortfolioData } from '$lib/stores/portfolio-data';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 
 	import SignInConfirmDialog from './SignInConfirmDialog.svelte';
 	import { signOut } from '$lib/auth-client';
+	import { getPublicUrl } from '$lib/utils';
+	import { goto } from '$app/navigation';
 
 	const data = {
 		navMain: [
@@ -39,6 +44,15 @@
 	const { setOpenMobile, isMobile } = useSidebar();
 	let shouldSignIn = $state(false);
 
+	// Fetch portfolio data when user is authenticated
+	$effect(() => {
+		if ($USER_DATA) {
+			fetchPortfolioData();
+		} else {
+			PORTFOLIO_DATA.set(null);
+		}
+	});
+
 	function handleNavClick(title: string) {
 		setOpenMobile(false);
 	}
@@ -46,6 +60,13 @@
 	function handleModeToggle() {
 		setMode(mode.current === 'light' ? 'dark' : 'light');
 		setOpenMobile(false);
+	}
+
+	function formatCurrency(value: number): string {
+		return value.toLocaleString('en-US', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		});
 	}
 </script>
 
@@ -121,6 +142,36 @@
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
 		</Sidebar.Group>
+
+		<!-- Portfolio Summary -->
+		{#if $USER_DATA && $PORTFOLIO_DATA}
+			<Sidebar.Group>
+				<Sidebar.GroupLabel>Portfolio</Sidebar.GroupLabel>
+				<Sidebar.GroupContent>
+					<div class="px-2 py-1 space-y-2">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								<Wallet class="h-4 w-4 text-muted-foreground" />
+								<span class="text-sm font-medium">Total Value</span>
+							</div>
+							<Badge variant="secondary" class="font-mono">
+								${formatCurrency($PORTFOLIO_DATA.totalValue)}
+							</Badge>
+						</div>
+						<div class="space-y-1 text-xs text-muted-foreground">
+							<div class="flex justify-between">
+								<span>Cash:</span>
+								<span class="font-mono">${formatCurrency($PORTFOLIO_DATA.baseCurrencyBalance)}</span>
+							</div>
+							<div class="flex justify-between">
+								<span>Coins:</span>
+								<span class="font-mono">${formatCurrency($PORTFOLIO_DATA.totalCoinValue)}</span>
+							</div>
+						</div>
+					</div>
+				</Sidebar.GroupContent>
+			</Sidebar.Group>
+		{/if}
 	</Sidebar.Content>
 
 	{#if $USER_DATA}
@@ -136,13 +187,12 @@
 									{...props}
 								>
 									<Avatar.Root class="size-8 rounded-lg">
-										<Avatar.Image src={$USER_DATA.image} alt={$USER_DATA.name} />
-										<Avatar.Fallback class="rounded-lg">CN</Avatar.Fallback>
+										<Avatar.Image src={getPublicUrl($USER_DATA.image)} alt={$USER_DATA.name} />
+										<Avatar.Fallback class="rounded-lg">?</Avatar.Fallback>
 									</Avatar.Root>
 									<div class="grid flex-1 text-left text-sm leading-tight">
 										<span class="truncate font-medium">{$USER_DATA.name}</span>
-										<span class="truncate text-xs">$35,674.34</span>
-										<!-- TODO: replace with actual db entry -->
+										<span class="truncate text-xs">@{$USER_DATA.username}</span>
 									</div>
 									<ChevronsUpDownIcon class="ml-auto size-4" />
 								</Sidebar.MenuButton>
@@ -157,12 +207,12 @@
 							<DropdownMenu.Label class="p-0 font-normal">
 								<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 									<Avatar.Root class="size-8 rounded-lg">
-										<Avatar.Image src={$USER_DATA.image} alt={$USER_DATA.name} />
-										<Avatar.Fallback class="rounded-lg">CN</Avatar.Fallback>
+										<Avatar.Image src={getPublicUrl($USER_DATA.image)} alt={$USER_DATA.name} />
+										<Avatar.Fallback class="rounded-lg">?</Avatar.Fallback>
 									</Avatar.Root>
 									<div class="grid flex-1 text-left text-sm leading-tight">
 										<span class="truncate font-medium">{$USER_DATA.name}</span>
-										<span class="truncate text-xs">{$USER_DATA.email}</span>
+										<span class="truncate text-xs">@{$USER_DATA.username}</span>
 									</div>
 								</div>
 							</DropdownMenu.Label>
@@ -175,7 +225,7 @@
 							</DropdownMenu.Group>
 							<DropdownMenu.Separator />
 							<DropdownMenu.Group>
-								<DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => goto('/settings')}>
 									<BadgeCheckIcon />
 									Account
 								</DropdownMenu.Item>

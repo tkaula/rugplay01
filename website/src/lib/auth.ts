@@ -1,7 +1,11 @@
+// src/lib/auth.ts (or your auth config file)
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from '$env/dynamic/private';
 import { db } from "./server/db";
+import * as schema from "./server/db/schema";
+import { generateUsername } from "./utils/random";
+import { uploadProfilePicture } from "./server/s3";
 
 if (!env.GOOGLE_CLIENT_ID) throw new Error('GOOGLE_CLIENT_ID is not set');
 if (!env.GOOGLE_CLIENT_SECRET) throw new Error('GOOGLE_CLIENT_SECRET is not set');
@@ -13,44 +17,67 @@ export const auth = betterAuth({
 
     database: drizzleAdapter(db, {
         provider: "pg",
+        schema: schema,
     }),
     socialProviders: {
         google: {
             clientId: env.GOOGLE_CLIENT_ID,
             clientSecret: env.GOOGLE_CLIENT_SECRET,
-        }
-    },
+            mapProfileToUser: async (profile) => {
+                const newUsername = generateUsername();
+                let s3ImageKey: string | null = null;
 
-    session: {
-        cookieCache: {
-            enabled: true,
-            maxAge: 60 * 5, // 5 minutes
+                if (profile.picture) {
+                    try {
+                        const response = await fetch(profile.picture);
+                        if (!response.ok) {
+                            console.error(`Failed to fetch profile picture: ${response.statusText}`);
+                        } else {
+                            const blob = await response.blob();
+                            const arrayBuffer = await blob.arrayBuffer();
+                            s3ImageKey = await uploadProfilePicture(
+                                profile.sub, // Using Google 'sub' for a unique identifier
+                                new Uint8Array(arrayBuffer),
+                                blob.type,
+                                blob.size
+                            );
+                        }
+                    } catch (error) {
+                        console.error('Failed to upload profile picture during social login:', error);
+                    }
+                }
+
+                return {
+                    name: profile.name,
+                    email: profile.email,
+                    image: s3ImageKey, // Store S3 key in the standard 'image' field
+                    username: newUsername,
+                };
+            },
         }
     },
     user: {
         additionalFields: {
-            isAdmin: {
-                type: "boolean",
-                required: true,
-                defaultValue: false,
-                input: false
-            },
-            isBanned: {
-                type: "boolean",
-                required: true,
-                defaultValue: false,
-                input: false
-            },
-            banReason: {
-                type: "string",
-                required: false,
-                defaultValue: null,
-                input: false
-            }
-        },
-        deleteUser: { enabled: true }
+            username: { type: "string", required: true, input: false },
+            isAdmin: { type: "boolean", required: false, input: false },
+            isBanned: { type: "boolean", required: false, input: false },
+            banReason: { type: "string", required: false, input: false },
+            baseCurrencyBalance: { type: "string", required: false, input: false },
+            bio: { type: "string", required: false },
+            // Ensure 'image' is not listed here if it's a core field,
+            // or ensure 'avatarUrl' is used consistently if it is an additional field.
+            // Based on current setup, 'image' is core.
+        }
+    },
+    session: {
+        cookieCache: {
+            enabled: true,
+            maxAge: 60 * 5,
+        }
     },
     advanced: {
-        generateId: false,
+        database: {
+            generateId: false,
+        }
     }
 });
