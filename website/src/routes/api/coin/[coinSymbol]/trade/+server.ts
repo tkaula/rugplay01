@@ -87,23 +87,32 @@ export async function POST({ params, request }) {
 
     let newPrice: number;
     let totalCost: number;
+    let priceImpact: number = 0;
+
+    if (poolCoinAmount <= 0 || poolBaseCurrencyAmount <= 0) {
+        throw error(400, 'Liquidity pool is not properly initialized or is empty. Trading halted.');
+    }
 
     if (type === 'BUY') {
-        // Calculate price impact for buying
+        // AMM BUY: amount = dollars to spend
         const k = poolCoinAmount * poolBaseCurrencyAmount;
-        const newPoolBaseCurrency = poolBaseCurrencyAmount + (amount * currentPrice);
+        const newPoolBaseCurrency = poolBaseCurrencyAmount + amount;
         const newPoolCoin = k / newPoolBaseCurrency;
         const coinsBought = poolCoinAmount - newPoolCoin;
 
-        totalCost = amount * currentPrice;
+        totalCost = amount;
         newPrice = newPoolBaseCurrency / newPoolCoin;
+        priceImpact = ((newPrice - currentPrice) / currentPrice) * 100;
 
         if (userBalance < totalCost) {
-            throw error(400, `Insufficient funds. You need $${totalCost.toFixed(2)} but only have $${userBalance.toFixed(2)}`);
+            throw error(400, `Insufficient funds. You need *${totalCost.toFixed(6)} BUSS but only have *${userBalance.toFixed(6)} BUSS`);
+        }
+
+        if (coinsBought <= 0) {
+            throw error(400, 'Trade amount too small - would result in zero tokens');
         }
 
         await db.transaction(async (tx) => {
-            // Update user balance
             await tx.update(user)
                 .set({
                     baseCurrencyBalance: (userBalance - totalCost).toString(),
@@ -111,7 +120,6 @@ export async function POST({ params, request }) {
                 })
                 .where(eq(user.id, userId));
 
-            // Update user portfolio
             const [existingHolding] = await tx
                 .select({ quantity: userPortfolio.quantity })
                 .from(userPortfolio)
@@ -140,23 +148,20 @@ export async function POST({ params, request }) {
                 });
             }
 
-            // Record transaction
             await tx.insert(transaction).values({
                 userId,
                 coinId: coinData.id,
                 type: 'BUY',
                 quantity: coinsBought.toString(),
-                pricePerCoin: currentPrice.toString(),
+                pricePerCoin: (totalCost / coinsBought).toString(),
                 totalBaseCurrencyAmount: totalCost.toString()
             });
 
-            // Record price history
             await tx.insert(priceHistory).values({
                 coinId: coinData.id,
                 price: newPrice.toString()
             });
 
-            // Calculate and update 24h metrics
             const metrics = await calculate24hMetrics(coinData.id, newPrice);
 
             await tx.update(coin)
@@ -178,11 +183,12 @@ export async function POST({ params, request }) {
             coinsBought,
             totalCost,
             newPrice,
+            priceImpact,
             newBalance: userBalance - totalCost
         });
 
     } else {
-        // SELL logic
+        // AMM SELL: amount = number of coins to sell
         const [userHolding] = await db
             .select({ quantity: userPortfolio.quantity })
             .from(userPortfolio)
@@ -196,7 +202,12 @@ export async function POST({ params, request }) {
             throw error(400, `Insufficient coins. You have ${userHolding ? Number(userHolding.quantity) : 0} but trying to sell ${amount}`);
         }
 
-        // Calculate price impact for selling
+        // Allow more aggressive selling for rug pull simulation - prevent only mathematical breakdown
+        const maxSellable = Math.floor(poolCoinAmount * 0.995); // 99.5% instead of 99%
+        if (amount > maxSellable) {
+            throw error(400, `Cannot sell more than 99.5% of pool tokens. Max sellable: ${maxSellable} tokens`);
+        }
+
         const k = poolCoinAmount * poolBaseCurrencyAmount;
         const newPoolCoin = poolCoinAmount + amount;
         const newPoolBaseCurrency = k / newPoolCoin;
@@ -204,10 +215,18 @@ export async function POST({ params, request }) {
 
         totalCost = baseCurrencyReceived;
         newPrice = newPoolBaseCurrency / newPoolCoin;
+        priceImpact = ((newPrice - currentPrice) / currentPrice) * 100;
 
-        // Execute sell transaction
+        // Lower minimum liquidity for more dramatic crashes
+        if (newPoolBaseCurrency < 10) {
+            throw error(400, `Trade would drain pool below minimum liquidity (*10 BUSS). Try selling fewer tokens.`);
+        }
+
+        if (totalCost <= 0) {
+            throw error(400, 'Trade amount results in zero base currency received');
+        }
+
         await db.transaction(async (tx) => {
-            // Update user balance
             await tx.update(user)
                 .set({
                     baseCurrencyBalance: (userBalance + totalCost).toString(),
@@ -215,9 +234,8 @@ export async function POST({ params, request }) {
                 })
                 .where(eq(user.id, userId));
 
-            // Update user portfolio
             const newQuantity = Number(userHolding.quantity) - amount;
-            if (newQuantity > 0) {
+            if (newQuantity > 0.000001) {
                 await tx.update(userPortfolio)
                     .set({
                         quantity: newQuantity.toString(),
@@ -235,23 +253,20 @@ export async function POST({ params, request }) {
                     ));
             }
 
-            // Record transaction
             await tx.insert(transaction).values({
                 userId,
                 coinId: coinData.id,
                 type: 'SELL',
                 quantity: amount.toString(),
-                pricePerCoin: currentPrice.toString(),
+                pricePerCoin: (totalCost / amount).toString(),
                 totalBaseCurrencyAmount: totalCost.toString()
             });
 
-            // Record price history
             await tx.insert(priceHistory).values({
                 coinId: coinData.id,
                 price: newPrice.toString()
             });
 
-            // Calculate and update 24h metrics - SINGLE coin table update
             const metrics = await calculate24hMetrics(coinData.id, newPrice);
 
             await tx.update(coin)
@@ -273,6 +288,7 @@ export async function POST({ params, request }) {
             coinsSold: amount,
             totalReceived: totalCost,
             newPrice,
+            priceImpact,
             newBalance: userBalance + totalCost
         });
     }

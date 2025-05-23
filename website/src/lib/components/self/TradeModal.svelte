@@ -8,7 +8,7 @@
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { toast } from 'svelte-sonner';
 
-	let { 
+	let {
 		open = $bindable(false),
 		type,
 		coin,
@@ -26,15 +26,44 @@
 	let loading = $state(false);
 
 	let numericAmount = $derived(parseFloat(amount) || 0);
-	let estimatedCost = $derived(numericAmount * coin.currentPrice);
+	let currentPrice = $derived(coin.currentPrice || 0);
+
+	let maxSellableAmount = $derived(
+		type === 'SELL' && coin
+			? Math.min(userHolding, Math.floor(Number(coin.poolCoinAmount) * 0.995))
+			: userHolding
+	);
+
+	let estimatedResult = $derived(calculateEstimate(numericAmount, type, currentPrice));
 	let hasValidAmount = $derived(numericAmount > 0);
 	let userBalance = $derived($USER_DATA ? Number($USER_DATA.baseCurrencyBalance) : 0);
 	let hasEnoughFunds = $derived(
-		type === 'BUY' 
-			? estimatedCost <= userBalance
-			: numericAmount <= userHolding
+		type === 'BUY' ? numericAmount <= userBalance : numericAmount <= userHolding
 	);
 	let canTrade = $derived(hasValidAmount && hasEnoughFunds && !loading);
+
+	function calculateEstimate(amount: number, tradeType: 'BUY' | 'SELL', price: number) {
+		if (!amount || !price || !coin) return { result: 0 };
+
+		const poolCoin = Number(coin.poolCoinAmount);
+		const poolBase = Number(coin.poolBaseCurrencyAmount);
+
+		if (poolCoin <= 0 || poolBase <= 0) return { result: 0 };
+
+		const k = poolCoin * poolBase;
+
+		if (tradeType === 'BUY') {
+			// AMM formula: how many coins for spending 'amount' dollars
+			const newPoolBase = poolBase + amount;
+			const newPoolCoin = k / newPoolBase;
+			return { result: poolCoin - newPoolCoin };
+		} else {
+			// AMM formula: how many dollars for selling 'amount' coins
+			const newPoolCoin = poolCoin + amount;
+			const newPoolBase = k / newPoolCoin;
+			return { result: poolBase - newPoolBase };
+		}
+	}
 
 	function handleClose() {
 		open = false;
@@ -65,9 +94,10 @@
 			}
 
 			toast.success(`${type === 'BUY' ? 'Bought' : 'Sold'} successfully!`, {
-				description: type === 'BUY' 
-					? `Purchased ${result.coinsBought.toFixed(2)} ${coin.symbol} for $${result.totalCost.toFixed(2)}`
-					: `Sold ${result.coinsSold.toFixed(2)} ${coin.symbol} for $${result.totalReceived.toFixed(2)}`
+				description:
+					type === 'BUY'
+						? `Purchased ${result.coinsBought.toFixed(6)} ${coin.symbol} for $${result.totalCost.toFixed(6)}`
+						: `Sold ${result.coinsSold.toFixed(6)} ${coin.symbol} for $${result.totalReceived.toFixed(6)}`
 			});
 
 			onSuccess?.();
@@ -83,10 +113,10 @@
 
 	function setMaxAmount() {
 		if (type === 'SELL') {
-			amount = userHolding.toString();
+			amount = maxSellableAmount.toString();
 		} else if ($USER_DATA) {
-			const maxCoins = Math.floor(userBalance / coin.currentPrice * 100) / 100;
-			amount = maxCoins.toString();
+			// For BUY, max is user's balance
+			amount = userBalance.toString();
 		}
 	}
 </script>
@@ -111,58 +141,66 @@
 		<div class="space-y-4">
 			<!-- Amount Input -->
 			<div class="space-y-2">
-				<Label for="amount">Amount ({coin.symbol})</Label>
+				<Label for="amount">
+					{type === 'BUY' ? 'Amount to spend ($)' : `Amount (${coin.symbol})`}
+				</Label>
 				<div class="flex gap-2">
 					<Input
 						id="amount"
 						type="number"
-						step="0.01"
+						step={type === 'BUY' ? '0.01' : '1'}
 						min="0"
 						bind:value={amount}
 						placeholder="0.00"
 						class="flex-1"
 					/>
-					<Button variant="outline" size="sm" onclick={setMaxAmount}>
-						Max
-					</Button>
+					<Button variant="outline" size="sm" onclick={setMaxAmount}>Max</Button>
 				</div>
 				{#if type === 'SELL'}
 					<p class="text-muted-foreground text-xs">
-						Available: {userHolding.toFixed(2)} {coin.symbol}
+						Available: {userHolding.toFixed(6)}
+						{coin.symbol}
+						{#if maxSellableAmount < userHolding}
+							<br />Max sellable: {maxSellableAmount.toFixed(0)} {coin.symbol} (pool limit)
+						{/if}
 					</p>
 				{:else if $USER_DATA}
 					<p class="text-muted-foreground text-xs">
-						Balance: ${userBalance.toFixed(2)}
+						Balance: ${userBalance.toFixed(6)}
 					</p>
 				{/if}
 			</div>
 
-			<!-- Estimated Cost/Return -->
+			<!-- Estimated Cost/Return with explicit fees -->
 			{#if hasValidAmount}
 				<div class="bg-muted/50 rounded-lg p-3">
-					<div class="flex justify-between items-center">
+					<div class="flex items-center justify-between">
 						<span class="text-sm font-medium">
-							{type === 'BUY' ? 'Total Cost:' : 'You\'ll Receive:'}
+							{type === 'BUY' ? `${coin.symbol} you'll get:` : "You'll receive:"}
 						</span>
 						<span class="font-bold">
-							${estimatedCost.toFixed(2)}
+							{type === 'BUY'
+								? `~${estimatedResult.result.toFixed(6)} ${coin.symbol}`
+								: `~$${estimatedResult.result.toFixed(6)}`}
 						</span>
 					</div>
-					{#if !hasEnoughFunds}
-						<Badge variant="destructive" class="mt-2 text-xs">
-							{type === 'BUY' ? 'Insufficient funds' : 'Insufficient coins'}
-						</Badge>
-					{/if}
+					<p class="text-muted-foreground mt-1 text-xs">
+						AMM estimation - includes slippage from pool impact
+					</p>
 				</div>
+			{/if}
+
+			{#if !hasEnoughFunds && hasValidAmount}
+				<Badge variant="destructive" class="text-xs">
+					{type === 'BUY' ? 'Insufficient funds' : 'Insufficient coins'}
+				</Badge>
 			{/if}
 		</div>
 
 		<Dialog.Footer class="flex gap-2">
-			<Button variant="outline" onclick={handleClose} disabled={loading}>
-				Cancel
-			</Button>
-			<Button 
-				onclick={handleTrade} 
+			<Button variant="outline" onclick={handleClose} disabled={loading}>Cancel</Button>
+			<Button
+				onclick={handleTrade}
 				disabled={!canTrade}
 				variant={type === 'BUY' ? 'default' : 'destructive'}
 			>

@@ -115,25 +115,12 @@ export async function POST({ request }) {
 
         createdCoin = newCoin;
 
-        await tx.insert(userPortfolio).values({
-            userId,
-            coinId: newCoin.id,
-            quantity: FIXED_SUPPLY.toString()
-        });
 
         await tx.insert(priceHistory).values({
             coinId: newCoin.id,
             price: STARTING_PRICE.toString()
         });
 
-        await tx.insert(transaction).values({
-            userId,
-            coinId: newCoin.id,
-            type: 'BUY',
-            quantity: FIXED_SUPPLY.toString(),
-            pricePerCoin: STARTING_PRICE.toString(),
-            totalBaseCurrencyAmount: (FIXED_SUPPLY * STARTING_PRICE).toString()
-        });
     });
 
     return json({
@@ -147,6 +134,7 @@ export async function POST({ request }) {
         feePaid: CREATION_FEE,
         liquidityDeposited: INITIAL_LIQUIDITY,
         initialPrice: STARTING_PRICE,
-        supply: FIXED_SUPPLY
+        supply: FIXED_SUPPLY,
+        message: "Coin created! All tokens are in the liquidity pool. Buy some if you want to hold them."
     });
 }

@@ -112,7 +112,7 @@
 	function generateVolumeData(candlestickData: any[], volumeData: any[]) {
 		return candlestickData.map((candle, index) => {
 			// Find corresponding volume data for this time period
-			const volumePoint = volumeData.find(v => v.time === candle.time);
+			const volumePoint = volumeData.find((v) => v.time === candle.time);
 			const volume = volumePoint ? volumePoint.volume : 0;
 
 			return {
@@ -179,10 +179,14 @@
 				priceFormat: { type: 'price', precision: 8, minMove: 0.00000001 }
 			});
 
-			const volumeSeries = chart.addSeries(HistogramSeries, {
-				priceFormat: { type: 'volume' },
-				priceScaleId: 'volume'
-			}, 1);
+			const volumeSeries = chart.addSeries(
+				HistogramSeries,
+				{
+					priceFormat: { type: 'volume' },
+					priceScaleId: 'volume'
+				},
+				1
+			);
 
 			const processedChartData = chartData.map((candle) => {
 				if (candle.open === candle.close) {
@@ -224,7 +228,9 @@
 	});
 
 	function formatPrice(price: number): string {
-		if (price < 0.01) {
+		if (price < 0.000001) {
+			return price.toFixed(8);
+		} else if (price < 0.01) {
 			return price.toFixed(6);
 		} else if (price < 1) {
 			return price.toFixed(4);
@@ -234,17 +240,21 @@
 	}
 
 	function formatMarketCap(value: number): string {
-		if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-		if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-		if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
-		return `$${value.toFixed(2)}`;
+		const num = Number(value);
+		if (isNaN(num)) return '$0.00';
+		if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+		if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+		if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
+		return `$${num.toFixed(2)}`;
 	}
 
 	function formatSupply(value: number): string {
-		if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
-		if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
-		if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
-		return value.toLocaleString();
+		const num = Number(value);
+		if (isNaN(num)) return '0';
+		if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
+		if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
+		if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
+		return num.toLocaleString();
 	}
 </script>
 
@@ -314,7 +324,7 @@
 							<TrendingDown class="h-4 w-4 text-red-500" />
 						{/if}
 						<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'}>
-							{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
+							{coin.change24h >= 0 ? '+' : ''}{Number(coin.change24h).toFixed(2)}%
 						</Badge>
 					</div>
 				</div>
@@ -327,7 +337,7 @@
 
 					<HoverCard.Root>
 						<HoverCard.Trigger
-							class="flex cursor-pointer items-center gap-2 rounded-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-8"
+							class="flex cursor-pointer items-center gap-1 rounded-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-8"
 							onclick={() => goto(`/user/${coin.creatorId}`)}
 						>
 							<Avatar.Root class="h-4 w-4">
@@ -411,7 +421,7 @@
 							<Card.Title>Trade {coin.symbol}</Card.Title>
 							{#if userHolding > 0}
 								<p class="text-muted-foreground text-sm">
-									You own: {userHolding.toFixed(2)}
+									You own: {formatSupply(userHolding)}
 									{coin.symbol}
 								</p>
 							{/if}
@@ -465,9 +475,9 @@
 										</div>
 										<div class="flex justify-between">
 											<span class="text-muted-foreground text-sm">Base Currency:</span>
-											<span class="font-mono text-sm"
-												>${coin.poolBaseCurrencyAmount.toLocaleString()}</span
-											>
+											<span class="font-mono text-sm">
+												${Number(coin.poolBaseCurrencyAmount).toLocaleString()}
+											</span>
 										</div>
 									</div>
 								</div>
@@ -476,13 +486,13 @@
 									<div class="space-y-2">
 										<div class="flex justify-between">
 											<span class="text-muted-foreground text-sm">Total Liquidity:</span>
-											<span class="font-mono text-sm"
-												>${(coin.poolBaseCurrencyAmount * 2).toLocaleString()}</span
-											>
+											<span class="font-mono text-sm">
+												${(Number(coin.poolBaseCurrencyAmount) * 2).toLocaleString()}
+											</span>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-muted-foreground text-sm">Price Impact:</span>
-											<Badge variant="success" class="text-xs">Low</Badge>
+											<span class="text-muted-foreground text-sm">Current Price:</span>
+											<span class="font-mono text-sm">${formatPrice(coin.currentPrice)}</span>
 										</div>
 									</div>
 								</div>
@@ -549,7 +559,7 @@
 								<TrendingDown class="h-4 w-4 text-red-500" />
 							{/if}
 							<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'} class="text-sm">
-								{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
+								{coin.change24h >= 0 ? '+' : ''}{Number(coin.change24h).toFixed(2)}%
 							</Badge>
 						</div>
 					</Card.Content>

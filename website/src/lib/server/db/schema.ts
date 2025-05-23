@@ -14,9 +14,9 @@ export const user = pgTable("user", {
 	isBanned: boolean("is_banned").default(false),
 	banReason: text("ban_reason"),
 	baseCurrencyBalance: decimal("base_currency_balance", {
-		precision: 19,
-		scale: 4,
-	}).notNull().default("10000.0000"), // 10,000 *BUSS
+		precision: 20,
+		scale: 8,
+	}).notNull().default("10000.00000000"), // 10,000 *BUSS
 	bio: varchar("bio", { length: 160 }).default("Hello am 48 year old man from somalia. Sorry for my bed england. I selled my wife for internet connection for play “conter stirk”"),
 	username: varchar("username", { length: 30 }).notNull().unique(),
 });
@@ -63,14 +63,14 @@ export const coin = pgTable("coin", {
 	symbol: varchar("symbol", { length: 10 }).notNull().unique(),
 	icon: text("icon"), // New field for coin icon
 	creatorId: integer("creator_id").references(() => user.id, { onDelete: "set null", }), // Coin can exist even if creator is deleted
-	initialSupply: decimal("initial_supply", { precision: 28, scale: 8 }).notNull(),
-	circulatingSupply: decimal("circulating_supply", { precision: 28, scale: 8 }).notNull(),
-	currentPrice: decimal("current_price", { precision: 19, scale: 8 }).notNull(), // Price in base currency
-	marketCap: decimal("market_cap", { precision: 28, scale: 4 }).notNull(),
-	volume24h: decimal("volume_24h", { precision: 28, scale: 4 }).default("0.0000"),
-	change24h: decimal("change_24h", { precision: 8, scale: 4 }).default("0.0000"), // Percentage
-	poolCoinAmount: decimal("pool_coin_amount", { precision: 28, scale: 8 }).notNull().default("0.00000000"),
-	poolBaseCurrencyAmount: decimal("pool_base_currency_amount", { precision: 28, scale: 4, }).notNull().default("0.0000"),
+	initialSupply: decimal("initial_supply", { precision: 30, scale: 8 }).notNull(),
+	circulatingSupply: decimal("circulating_supply", { precision: 30, scale: 8 }).notNull(),
+	currentPrice: decimal("current_price", { precision: 20, scale: 8 }).notNull(), // Price in base currency
+	marketCap: decimal("market_cap", { precision: 30, scale: 2 }).notNull(),
+	volume24h: decimal("volume_24h", { precision: 30, scale: 2 }).default("0.00"),
+	change24h: decimal("change_24h", { precision: 10, scale: 4 }).default("0.0000"), // Percentage
+	poolCoinAmount: decimal("pool_coin_amount", { precision: 30, scale: 8 }).notNull().default("0.00000000"),
+	poolBaseCurrencyAmount: decimal("pool_base_currency_amount", { precision: 30, scale: 8, }).notNull().default("0.00000000"),
 	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	isListed: boolean("is_listed").default(true).notNull(),
@@ -79,7 +79,7 @@ export const coin = pgTable("coin", {
 export const userPortfolio = pgTable("user_portfolio", {
 	userId: integer("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 	coinId: integer("coin_id").notNull().references(() => coin.id, { onDelete: "cascade" }),
-	quantity: decimal("quantity", { precision: 28, scale: 8 }).notNull(),
+	quantity: decimal("quantity", { precision: 30, scale: 8 }).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 },
 	(table) => {
@@ -94,15 +94,15 @@ export const transaction = pgTable("transaction", {
 	userId: integer("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 	coinId: integer("coin_id").notNull().references(() => coin.id, { onDelete: "cascade" }),
 	type: transactionTypeEnum("type").notNull(),
-	quantity: decimal("quantity", { precision: 28, scale: 8 }).notNull(),
-	pricePerCoin: decimal("price_per_coin", { precision: 19, scale: 8 }).notNull(),
-	totalBaseCurrencyAmount: decimal("total_base_currency_amount", { precision: 28, scale: 4 }).notNull(),
+	quantity: decimal("quantity", { precision: 30, scale: 8 }).notNull(),
+	pricePerCoin: decimal("price_per_coin", { precision: 20, scale: 8 }).notNull(),
+	totalBaseCurrencyAmount: decimal("total_base_currency_amount", { precision: 30, scale: 8 }).notNull(),
 	timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const priceHistory = pgTable("price_history", {
 	id: serial("id").primaryKey(),
 	coinId: integer("coin_id").notNull().references(() => coin.id, { onDelete: "cascade" }),
-	price: decimal("price", { precision: 19, scale: 8 }).notNull(),
+	price: decimal("price", { precision: 20, scale: 8 }).notNull(),
 	timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
 });
