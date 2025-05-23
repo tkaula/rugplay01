@@ -91,7 +91,7 @@
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{#each coins.slice(0, 6) as coin}
 				<a href={`/coin/${coin.symbol}`} class="block">
-					<Card.Root class="h-full transition-shadow hover:shadow-md">
+					<Card.Root class="hover:bg-card/50 h-full transition-shadow hover:shadow-md transition-all">
 						<Card.Header>
 							<Card.Title class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
