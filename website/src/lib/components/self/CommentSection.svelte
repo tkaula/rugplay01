@@ -162,14 +162,12 @@
 
 		<!-- Comments List -->
 		{#if isLoading}
-			<div class="py-8 text-center">
+			<div class="text-center">
 				<Loader2 class="mx-auto h-6 w-6 animate-spin" />
-				<p class="text-muted-foreground mt-2 text-sm">Loading comments...</p>
 			</div>
 		{:else if comments.length === 0}
-			<div class="py-8 text-center">
-				<MessageCircle class="text-muted-foreground mx-auto h-12 w-12" />
-				<p class="text-muted-foreground mt-2">
+			<div class="text-center">
+				<p class="text-muted-foreground mt-2 text-sm">
 					No comments yet. Be the first to share your thoughts!
 				</p>
 			</div>
