@@ -70,6 +70,31 @@
 			invalidateAll();
 		}
 	});
+
+	function getPageTitle(routeId: string | null): string {
+		if (!routeId) return 'Rugplay';
+
+		const titleMap: Record<string, string> = {
+			'/': 'Home',
+			'/market': 'Market',
+			'/portfolio': 'Portfolio', 
+			'/leaderboard': 'Leaderboard',
+			'/coin/create': 'Create Coin',
+			'/settings': 'Settings',
+			'/admin': 'Admin',
+			'/transactions': 'Transactions'
+		};
+
+		// Handle dynamic routes
+		if (routeId.startsWith('/coin/[coinSymbol]')) {
+			return 'Coin Details';
+		}
+		if (routeId.startsWith('/user/[userId]')) {
+			return 'User Profile';
+		}
+
+		return titleMap[routeId] || 'Rugplay';
+	}
 </script>
 
 <ModeWatcher />
@@ -86,11 +111,7 @@
 				<Sidebar.Trigger class="-ml-1" />
 
 				<h1 class="mr-6 text-base font-medium">
-					{#if page.route.id === '/coin/create'}
-						Coin: Create
-					{:else}
-						test
-					{/if}
+					{getPageTitle(page.route.id)}
 				</h1>
 			</div>
 		</header>

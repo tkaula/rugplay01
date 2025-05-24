@@ -17,7 +17,8 @@
 		CreditCardIcon,
 		BellIcon,
 		LogOutIcon,
-		Wallet
+		Wallet,
+		Trophy
 	} from 'lucide-svelte';
 	import { mode, setMode } from 'mode-watcher';
 	import type { HTMLAttributes } from 'svelte/elements';
@@ -35,6 +36,7 @@
 			{ title: 'Home', url: '/', icon: Home },
 			{ title: 'Market', url: '/market', icon: Store },
 			{ title: 'Portfolio', url: '/portfolio', icon: BriefcaseBusiness },
+			{ title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
 			{ title: 'Create coin', url: '/coin/create', icon: Coins }
 		],
 		navAdmin: [{ title: 'Admin', url: '/admin', icon: ShieldAlert }]

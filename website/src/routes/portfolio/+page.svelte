@@ -4,7 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
-	import { getPublicUrl } from '$lib/utils';
+	import { getPublicUrl, formatPrice, formatValue, formatQuantity, formatDate } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { TrendingUp, DollarSign, Wallet, TrendingDown, Clock, Receipt } from 'lucide-svelte';
@@ -49,43 +49,6 @@
 		} finally {
 			loading = false;
 		}
-	}
-
-	function formatPrice(price: number): string {
-		if (price < 0.01) {
-			return price.toFixed(6);
-		} else if (price < 1) {
-			return price.toFixed(4);
-		} else {
-			return price.toLocaleString(undefined, {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2
-			});
-		}
-	}
-
-	function formatValue(value: number): string {
-		if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-		if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-		if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
-		return `$${value.toFixed(2)}`;
-	}
-
-	function formatQuantity(value: number): string {
-		if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
-		if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
-		if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
-		return value.toLocaleString();
-	}
-
-	function formatDate(timestamp: string): string {
-		const date = new Date(timestamp);
-		return date.toLocaleDateString('en-US', {
-			month: 'short',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
 	}
 
 	let totalPortfolioValue = $derived(portfolioData ? portfolioData.totalValue : 0);

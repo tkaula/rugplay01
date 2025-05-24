@@ -2,7 +2,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
-	import { getTimeBasedGreeting } from '$lib/utils';
+	import { getTimeBasedGreeting, formatPrice, formatMarketCap } from '$lib/utils';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
@@ -29,26 +29,6 @@
 			loading = false;
 		}
 	});
-
-	function formatPrice(price: number): string {
-		if (price < 0.01) {
-			return price.toFixed(6);
-		} else if (price < 1) {
-			return price.toFixed(4);
-		} else {
-			return price.toLocaleString(undefined, {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2
-			});
-		}
-	}
-
-	function formatMarketCap(value: number): string {
-		if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-		if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-		if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
-		return `$${value.toFixed(2)}`;
-	}
 </script>
 
 <SignInConfirmDialog bind:open={shouldSignIn} />
