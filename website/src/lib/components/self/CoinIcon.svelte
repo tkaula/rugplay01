@@ -23,6 +23,8 @@
 		src={getPublicUrl(icon)}
 		alt={name}
 		class="{sizeClass} rounded-full object-cover {className}"
+		loading="lazy"
+		decoding="async"
 	/>
 {:else}
 	<div

@@ -3,7 +3,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-	return twMerge(clsx(inputs));
+    return twMerge(clsx(inputs));
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,7 +15,7 @@ export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?:
 
 export function getTimeBasedGreeting(name: string): string {
     const hour = new Date().getHours();
-    
+
     if (hour < 12) {
         return `Good morning, ${name}`;
     } else if (hour < 17) {
@@ -79,6 +79,50 @@ export function formatDate(timestamp: string): string {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+export function formatRelativeTime(timestamp: string | Date): string {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const ms = now.getTime() - past.getTime();
+
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (seconds < 60) return `${seconds}s`;
+    if (minutes < 60) return `${minutes}m`;
+    
+    if (hours < 24) {
+        const extraMinutes = minutes % 60;
+        return extraMinutes === 0 ? `${hours}hr` : `${hours}hr ${extraMinutes}m`;
+    }
+
+    if (days < 7) return `${days}d`;
+
+    const yearsDiff = now.getFullYear() - past.getFullYear();
+    const monthsDiff = now.getMonth() - past.getMonth();
+    const totalMonths = yearsDiff * 12 + monthsDiff;
+    const adjustedMonths = totalMonths + (now.getDate() < past.getDate() ? -1 : 0);
+    const years = Math.floor(adjustedMonths / 12);
+
+    if (adjustedMonths < 1) {
+        const weeks = Math.floor(days / 7);
+        const extraDays = days % 7;
+        return extraDays === 0 ? `${weeks}w` : `${weeks}w ${extraDays}d`;
+    }
+
+    if (years < 1) {
+        const tempDate = new Date(past);
+        tempDate.setMonth(tempDate.getMonth() + adjustedMonths);
+        const remainingDays = Math.floor((now.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24));
+        const weeks = Math.floor(remainingDays / 7);
+        return weeks === 0 ? `${adjustedMonths}m` : `${adjustedMonths}m ${weeks}w`;
+    }
+
+    const remainingMonths = adjustedMonths % 12;
+    return remainingMonths === 0 ? `${years}y` : `${years}y ${remainingMonths}m`;
 }
 
 export const formatMarketCap = formatValue;
