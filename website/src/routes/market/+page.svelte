@@ -2,7 +2,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Popover from '$lib/components/ui/popover';
 	import * as Pagination from '$lib/components/ui/pagination';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as Select from '$lib/components/ui/select';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
@@ -18,11 +18,11 @@
 		SlidersHorizontal,
 		ChevronLeft,
 		ChevronRight,
-		ChevronDown,
 		DollarSign,
 		TrendingUp,
 		ArrowUpDown
-	} from 'lucide-svelte';	import { formatPrice, formatMarketCap, debounce, formatRelativeTime } from '$lib/utils';
+	} from 'lucide-svelte';
+	import { formatPrice, formatMarketCap, debounce, formatRelativeTime } from '$lib/utils';
 	import { MediaQuery } from 'svelte/reactivity';
 	import type { CoinData, FilterOption, VolatilityBadge, MarketResponse } from '$lib/types/market';
 
@@ -165,8 +165,19 @@
 		fetchMarketData();
 	}
 
-	function handleSortOrderChange(newSortOrder: string) {
-		sortOrder = newSortOrder;
+	function handleSortOrderChange() {
+		currentPage = 1;
+		updateURL();
+		fetchMarketData();
+	}
+
+	function handlePriceFilterChange() {
+		currentPage = 1;
+		updateURL();
+		fetchMarketData();
+	}
+
+	function handleChangeFilterChange() {
 		currentPage = 1;
 		updateURL();
 		fetchMarketData();
@@ -197,20 +208,6 @@
 		if (absChange > 20) return { text: '📈 HOT', variant: 'secondary' as const };
 		if (absChange > 10) return { text: '⚡ ACTIVE', variant: 'outline' as const };
 		return null;
-	}
-
-	function handlePriceFilterChange(value: string) {
-		priceFilter = value;
-		currentPage = 1;
-		updateURL();
-		fetchMarketData();
-	}
-
-	function handleChangeFilterChange(value: string) {
-		changeFilter = value;
-		currentPage = 1;
-		updateURL();
-		fetchMarketData();
 	}
 
 	let hasActiveFilters = $derived(
@@ -316,89 +313,68 @@
 
 							<div class="space-y-2">
 								<Label class="text-sm font-medium">Sort Order</Label>
-								<DropdownMenu.Root>
-									<DropdownMenu.Trigger
-										class="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full items-center justify-between rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-									>
-										<div class="flex items-center gap-2">
-											<ArrowUpDown class="h-4 w-4" />
-											<span>{currentSortOrderLabel}</span>
-										</div>
-										<ChevronDown class="h-4 w-4 opacity-50" />
-									</DropdownMenu.Trigger>
-									<DropdownMenu.Content class="w-56">
-										{#each sortOrderOptions as option}
-											<DropdownMenu.Item
-												onclick={() => handleSortOrderChange(option.value)}
-												class="cursor-pointer"
-											>
-												<ArrowUpDown class="h-4 w-4" />
-												<span>{option.label}</span>
-												{#if sortOrder === option.value}
-													<div class="bg-primary ml-auto h-2 w-2 rounded-full"></div>
-												{/if}
-											</DropdownMenu.Item>
-										{/each}
-									</DropdownMenu.Content>
-								</DropdownMenu.Root>
+								<Select.Root
+									type="single"
+									bind:value={sortOrder}
+									onValueChange={handleSortOrderChange}
+								>
+									<Select.Trigger class="w-full">
+										{currentSortOrderLabel}
+									</Select.Trigger>
+									<Select.Content>
+										<Select.Group>
+											{#each sortOrderOptions as option}
+												<Select.Item value={option.value} label={option.label}>
+													{option.label}
+												</Select.Item>
+											{/each}
+										</Select.Group>
+									</Select.Content>
+								</Select.Root>
 							</div>
 
 							<div class="space-y-2">
 								<Label class="text-sm font-medium">Price Range</Label>
-								<DropdownMenu.Root>
-									<DropdownMenu.Trigger
-										class="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full items-center justify-between rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-									>
-										<div class="flex items-center gap-2">
-											<DollarSign class="h-4 w-4" />
-											<span>{currentPriceFilterLabel}</span>
-										</div>
-										<ChevronDown class="h-4 w-4 opacity-50" />
-									</DropdownMenu.Trigger>
-									<DropdownMenu.Content class="w-56">
-										{#each priceFilterOptions as option}
-											<DropdownMenu.Item
-												onclick={() => handlePriceFilterChange(option.value)}
-												class="cursor-pointer"
-											>
-												<DollarSign class="h-4 w-4" />
-												<span>{option.label}</span>
-												{#if priceFilter === option.value}
-													<div class="bg-primary ml-auto h-2 w-2 rounded-full"></div>
-												{/if}
-											</DropdownMenu.Item>
-										{/each}
-									</DropdownMenu.Content>
-								</DropdownMenu.Root>
+								<Select.Root
+									type="single"
+									bind:value={priceFilter}
+									onValueChange={handlePriceFilterChange}
+								>
+									<Select.Trigger class="w-full">
+										{currentPriceFilterLabel}
+									</Select.Trigger>
+									<Select.Content>
+										<Select.Group>
+											{#each priceFilterOptions as option}
+												<Select.Item value={option.value} label={option.label}>
+													{option.label}
+												</Select.Item>
+											{/each}
+										</Select.Group>
+									</Select.Content>
+								</Select.Root>
 							</div>
 
 							<div class="space-y-2">
 								<Label class="text-sm font-medium">24h Change</Label>
-								<DropdownMenu.Root>
-									<DropdownMenu.Trigger
-										class="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full items-center justify-between rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-									>
-										<div class="flex items-center gap-2">
-											<TrendingUp class="h-4 w-4" />
-											<span>{currentChangeFilterLabel}</span>
-										</div>
-										<ChevronDown class="h-4 w-4 opacity-50" />
-									</DropdownMenu.Trigger>
-									<DropdownMenu.Content class="w-56">
-										{#each changeFilterOptions as option}
-											<DropdownMenu.Item
-												onclick={() => handleChangeFilterChange(option.value)}
-												class="cursor-pointer"
-											>
-												<TrendingUp class="h-4 w-4" />
-												<span>{option.label}</span>
-												{#if changeFilter === option.value}
-													<div class="bg-primary ml-auto h-2 w-2 rounded-full"></div>
-												{/if}
-											</DropdownMenu.Item>
-										{/each}
-									</DropdownMenu.Content>
-								</DropdownMenu.Root>
+								<Select.Root
+									type="single"
+									bind:value={changeFilter}
+									onValueChange={handleChangeFilterChange}
+								>
+									<Select.Trigger class="w-full">
+										{currentChangeFilterLabel}
+									</Select.Trigger>
+									<Select.Content>
+										<Select.Group>
+											{#each changeFilterOptions as option}
+												<Select.Item value={option.value} label={option.label}>
+													{option.label}
+												</Select.Item>
+											{/each}
+										</Select.Group>
+									</Select.Content>
+								</Select.Root>
 							</div>
 
 							<div class="flex gap-2 pt-2">

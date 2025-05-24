@@ -93,7 +93,7 @@ export function formatRelativeTime(timestamp: string | Date): string {
 
     if (seconds < 60) return `${seconds}s`;
     if (minutes < 60) return `${minutes}m`;
-    
+
     if (hours < 24) {
         const extraMinutes = minutes % 60;
         return extraMinutes === 0 ? `${hours}hr` : `${hours}hr ${extraMinutes}m`;
@@ -123,6 +123,20 @@ export function formatRelativeTime(timestamp: string | Date): string {
 
     const remainingMonths = adjustedMonths % 12;
     return remainingMonths === 0 ? `${years}y` : `${years}y ${remainingMonths}m`;
+}
+
+export function formatTimeAgo(date: string) {
+    const now = new Date();
+    const commentDate = new Date(date);
+    const diffMs = now.getTime() - commentDate.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
 }
 
 export const formatMarketCap = formatValue;

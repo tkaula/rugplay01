@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, decimal, serial, varchar, integer, primaryKey, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, decimal, serial, varchar, integer, primaryKey, pgEnum, index } from "drizzle-orm/pg-core";
 
 export const transactionTypeEnum = pgEnum('transaction_type', ['BUY', 'SELL']);
 
@@ -105,4 +105,30 @@ export const priceHistory = pgTable("price_history", {
 	coinId: integer("coin_id").notNull().references(() => coin.id, { onDelete: "cascade" }),
 	price: decimal("price", { precision: 20, scale: 8 }).notNull(),
 	timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const comment = pgTable("comment", {
+	id: serial("id").primaryKey(),
+	userId: integer("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+	coinId: integer("coin_id").notNull().references(() => coin.id, { onDelete: "cascade" }),
+	content: varchar("content", { length: 500 }).notNull(),
+	likesCount: integer("likes_count").notNull().default(0),
+	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	isDeleted: boolean("is_deleted").default(false).notNull(),
+}, (table) => {
+	return {
+		userIdIdx: index("comment_user_id_idx").on(table.userId),
+		coinIdIdx: index("comment_coin_id_idx").on(table.coinId),
+	};
+});
+
+export const commentLike = pgTable("comment_like", {
+	userId: integer("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+	commentId: integer("comment_id").notNull().references(() => comment.id, { onDelete: "cascade" }),
+	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => {
+	return {
+		pk: primaryKey({ columns: [table.userId, table.commentId] }),
+	};
 });

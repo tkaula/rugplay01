@@ -5,6 +5,7 @@
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import TradeModal from '$lib/components/self/TradeModal.svelte';
+	import CommentSection from '$lib/components/self/CommentSection.svelte';
 	import {
 		TrendingUp,
 		TrendingDown,
@@ -361,7 +362,7 @@
 									<div class="flex items-center pt-2">
 										<CalendarDays class="mr-2 h-4 w-4 opacity-70" />
 										<span class="text-muted-foreground text-xs">
-											Joined {new Date(coin.createdAt).toLocaleDateString('en-US', {
+											Joined {new Date(coin.creatorCreatedAt).toLocaleDateString('en-US', {
 												year: 'numeric',
 												month: 'long'
 											})}
@@ -565,6 +566,9 @@
 					</Card.Content>
 				</Card.Root>
 			</div>
+
+			<!-- Comments Section -->
+			<CommentSection {coinSymbol} />
 		</div>
 	</div>
 {/if}
