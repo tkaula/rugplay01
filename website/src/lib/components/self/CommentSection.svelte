@@ -11,6 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { formatTimeAgo, getPublicUrl } from '$lib/utils';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
+	import WebSocket, { type WebSocketHandle } from '$lib/components/self/WebSocket.svelte';
 
 	const { coinSymbol } = $props<{ coinSymbol: string }>();
 	import type { Comment } from '$lib/types/comment';
@@ -19,6 +20,39 @@
 	let isSubmitting = $state(false);
 	let isLoading = $state(true);
 	let shouldSignIn = $state(false);
+	let wsManager = $state<WebSocketHandle | undefined>();
+
+	function handleWebSocketMessage(message: { type: string; data?: any }) {
+		switch (message.type) {
+			case 'new_comment':
+				// check if comment already exists
+				const commentExists = comments.some((c) => c.id === message.data.id);
+				if (!commentExists) {
+					comments = [message.data, ...comments];
+				}
+				break;
+			case 'comment_liked':
+				const commentIndex = comments.findIndex((c) => c.id === message.data.commentId);
+				if (commentIndex !== -1) {
+					comments[commentIndex] = {
+						...comments[commentIndex],
+						likesCount: message.data.likesCount,
+						isLikedByUser:
+							message.data.userId === Number($USER_DATA?.id)
+								? message.data.isLikedByUser
+								: comments[commentIndex].isLikedByUser
+					};
+				}
+				break;
+		}
+	}
+
+	function handleWebSocketOpen() {
+		wsManager?.send({
+			type: 'set_coin',
+			coinSymbol
+		});
+	}
 
 	async function loadComments() {
 		try {
@@ -52,7 +86,11 @@
 
 			if (response.ok) {
 				const result = await response.json();
-				comments = [result.comment, ...comments];
+				// check if comment already exists (from ws) before adding
+				const commentExists = comments.some((c) => c.id === result.comment.id);
+				if (!commentExists) {
+					comments = [result.comment, ...comments];
+				}
 				newComment = '';
 			} else {
 				const error = await response.json();
@@ -111,6 +149,13 @@
 </script>
 
 <SignInConfirmDialog bind:open={shouldSignIn} />
+
+<WebSocket
+	bind:this={wsManager}
+	onMessage={handleWebSocketMessage}
+	onOpen={handleWebSocketOpen}
+	disableReconnect={true}
+/>
 
 <Card.Root>
 	<Card.Header>

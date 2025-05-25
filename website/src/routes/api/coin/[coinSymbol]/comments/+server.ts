@@ -3,6 +3,7 @@ import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { comment, coin, user, commentLike } from '$lib/server/db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { redis } from '$lib/server/redis';
 
 export async function GET({ params, request }) {
     const session = await auth.api.getSession({
@@ -116,6 +117,14 @@ export async function POST({ request, params }) {
             .innerJoin(user, eq(comment.userId, user.id))
             .where(eq(comment.id, newComment.id))
             .limit(1);
+
+        await redis.publish(
+            `comments:${normalizedSymbol}`,
+            JSON.stringify({
+                type: 'new_comment',
+                data: commentWithUser
+            })
+        );
 
         return json({ comment: commentWithUser });
     } catch (e) {

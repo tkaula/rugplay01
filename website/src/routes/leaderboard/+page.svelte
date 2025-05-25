@@ -164,7 +164,7 @@
 					{#if leaderboardData.biggestLosers.length === 0}
 						<div class="py-8 text-center">
 							<p class="text-muted-foreground">
-								Everyone's in profit today! 📈 (This won't last...)
+								No major losses recorded today
 							</p>
 						</div>
 					{:else}

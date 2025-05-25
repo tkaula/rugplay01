@@ -4,6 +4,7 @@ import { comment, commentLike, coin } from '$lib/server/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { auth } from '$lib/auth';
+import { redis } from '$lib/server/redis';
 
 export const POST: RequestHandler = async ({ request, params }) => {
 	const session = await auth.api.getSession({
@@ -53,6 +54,24 @@ export const POST: RequestHandler = async ({ request, params }) => {
 				.set({ likesCount: sql`${comment.likesCount} + 1` })
 				.where(eq(comment.id, commentId));
 		});
+
+		const [updatedComment] = await db
+			.select({ likesCount: comment.likesCount })
+			.from(comment)
+			.where(eq(comment.id, commentId));
+
+		await redis.publish(
+			`comments:${coinSymbol!.toUpperCase()}`,
+			JSON.stringify({
+				type: 'comment_liked',
+				data: {
+					commentId: Number(commentId),
+					likesCount: updatedComment.likesCount,
+					isLikedByUser: true,
+					userId
+				}
+			})
+		)
 
 		return json({ success: true });
 	} catch (error) {
@@ -111,6 +130,24 @@ export const DELETE: RequestHandler = async ({ request, params }) => {
 				.set({ likesCount: sql`GREATEST(0, ${comment.likesCount} - 1)` })
 				.where(eq(comment.id, commentId));
 		});
+
+		const [updatedComment] = await db
+			.select({ likesCount: comment.likesCount })
+			.from(comment)
+			.where(eq(comment.id, commentId));
+
+		await redis.publish(
+			`comments:${coinSymbol.toUpperCase()}`,
+			JSON.stringify({
+				type: 'comment_liked',
+				data: {
+					commentId: Number(commentId),
+					likesCount: updatedComment.likesCount,
+					isLikedByUser: false,
+					userId
+				}
+			})
+		);
 
 		return json({ success: true });
 	} catch (error) {
