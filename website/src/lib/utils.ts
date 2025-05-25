@@ -45,6 +45,7 @@ export function debounce(func: (...args: any[]) => void, wait: number) {
 }
 
 export function formatPrice(price: number): string {
+    if (typeof price !== 'number' || isNaN(price)) return '$0.00';
     if (price < 0.01) {
         return price.toFixed(6);
     } else if (price < 1) {
@@ -57,14 +58,17 @@ export function formatPrice(price: number): string {
     }
 }
 
-export function formatValue(value: number): string {
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-    if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
-    return `$${value.toFixed(2)}`;
+export function formatValue(value: number | string): string {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    if (typeof numValue !== 'number' || isNaN(numValue)) return '$0.00';
+    if (numValue >= 1e9) return `$${(numValue / 1e9).toFixed(2)}B`;
+    if (numValue >= 1e6) return `$${(numValue / 1e6).toFixed(2)}M`;
+    if (numValue >= 1e3) return `$${(numValue / 1e3).toFixed(2)}K`;
+    return `$${numValue.toFixed(2)}`;
 }
 
 export function formatQuantity(value: number): string {
+    if (typeof value !== 'number' || isNaN(value)) return '0';
     if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
     if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
     if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;

@@ -1,13 +1,14 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
 	import { getTimeBasedGreeting, formatPrice, formatMarketCap } from '$lib/utils';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
+	import DataTable from '$lib/components/self/DataTable.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
 
 	let shouldSignIn = $state(false);
 	let coins = $state<any[]>([]);
@@ -29,6 +30,51 @@
 			loading = false;
 		}
 	});
+
+	const marketColumns = [
+		{
+			key: 'name',
+			label: 'Name',
+			class: 'font-medium',
+			render: (value: any, row: any) => {
+				return {
+					component: 'link',
+					href: `/coin/${row.symbol}`,
+					content: {
+						icon: row.icon,
+						symbol: row.symbol,
+						name: row.name
+					}
+				};
+			}
+		},
+		{
+			key: 'price',
+			label: 'Price',
+			render: (value: any) => `$${formatPrice(value)}`
+		},
+		{
+			key: 'change24h',
+			label: '24h Change',
+			render: (value: any) => ({
+				component: 'badge',
+				variant: value >= 0 ? 'success' : 'destructive',
+				text: `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+			})
+		},
+		{
+			key: 'marketCap',
+			label: 'Market Cap',
+			class: 'hidden md:table-cell',
+			render: (value: any) => formatMarketCap(value)
+		},
+		{
+			key: 'volume24h',
+			label: 'Volume (24h)',
+			class: 'hidden md:table-cell',
+			render: (value: any) => formatMarketCap(value)
+		}
+	];
 </script>
 
 <SignInConfirmDialog bind:open={shouldSignIn} />
@@ -102,44 +148,11 @@
 			<h2 class="mb-4 text-2xl font-bold">Market Overview</h2>
 			<Card.Root>
 				<Card.Content class="p-0">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Name</Table.Head>
-								<Table.Head>Price</Table.Head>
-								<Table.Head>24h Change</Table.Head>
-								<Table.Head class="hidden md:table-cell">Market Cap</Table.Head>
-								<Table.Head class="hidden md:table-cell">Volume (24h)</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each coins as coin}
-								<Table.Row>
-									<Table.Cell class="font-medium">
-										<a
-											href={`/coin/${coin.symbol}`}
-											class="flex items-center gap-2 hover:underline"
-										>
-											<CoinIcon icon={coin.icon} symbol={coin.symbol} name={coin.name} size={4} />
-											{coin.name} <span class="text-muted-foreground">(*{coin.symbol})</span>
-										</a>
-									</Table.Cell>
-									<Table.Cell>${formatPrice(coin.price)}</Table.Cell>
-									<Table.Cell>
-										<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'}>
-											{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
-										</Badge>
-									</Table.Cell>
-									<Table.Cell class="hidden md:table-cell"
-										>{formatMarketCap(coin.marketCap)}</Table.Cell
-									>
-									<Table.Cell class="hidden md:table-cell"
-										>{formatMarketCap(coin.volume24h)}</Table.Cell
-									>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
+					<DataTable
+						columns={marketColumns}
+						data={coins}
+						onRowClick={(coin) => goto(`/coin/${coin.symbol}`)}
+					/>
 				</Card.Content>
 			</Card.Root>
 		</div>

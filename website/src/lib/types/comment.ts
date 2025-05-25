@@ -12,6 +12,7 @@ export interface Comment {
 
     userBio: string | null;
     userCreatedAt: string;
+    userIsAdmin: boolean;
 }
 
 export interface CommentLike {

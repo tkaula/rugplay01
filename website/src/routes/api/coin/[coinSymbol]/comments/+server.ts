@@ -35,8 +35,6 @@ export async function GET({ params, request }) {
                 userName: user.name,
                 userUsername: user.username,
                 userImage: user.image,
-                userBio: user.bio,
-                userCreatedAt: user.createdAt,
                 isLikedByUser: session?.user ?
                     sql<boolean>`EXISTS(SELECT 1 FROM ${commentLike} WHERE ${commentLike.userId} = ${session.user.id} AND ${commentLike.commentId} = ${comment.id})` :
                     sql<boolean>`FALSE`
@@ -109,8 +107,6 @@ export async function POST({ request, params }) {
                 userName: user.name,
                 userUsername: user.username,
                 userImage: user.image,
-                userBio: user.bio,
-                userCreatedAt: user.createdAt,
                 isLikedByUser: sql<boolean>`FALSE`
             })
             .from(comment)

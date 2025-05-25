@@ -5,12 +5,13 @@
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import { Badge } from '$lib/components/ui/badge';
-	import { MessageCircle, Send, Loader2, Heart, CalendarDays } from 'lucide-svelte';
+	import { MessageCircle, Send, Loader2, Heart } from 'lucide-svelte';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { formatTimeAgo, getPublicUrl } from '$lib/utils';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
+	import UserProfilePreview from '$lib/components/self/UserProfilePreview.svelte';
 	import WebSocket, { type WebSocketHandle } from '$lib/components/self/WebSocket.svelte';
 
 	const { coinSymbol } = $props<{ coinSymbol: string }>();
@@ -221,7 +222,7 @@
 				{#each comments as comment (comment.id)}
 					<div class="border-border border-b pb-4 last:border-b-0">
 						<div class="flex items-start gap-3">
-							<button onclick={() => goto(`/user/${comment.userId}`)} class="cursor-pointer">
+							<button onclick={() => goto(`/user/${comment.userUsername}`)} class="cursor-pointer">
 								<Avatar.Root class="h-8 w-8">
 									<Avatar.Image src={getPublicUrl(comment.userImage)} alt={comment.userName} />
 									<Avatar.Fallback>{comment.userName?.charAt(0) || '?'}</Avatar.Fallback>
@@ -232,39 +233,18 @@
 									<HoverCard.Root>
 										<HoverCard.Trigger
 											class="cursor-pointer font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-8"
-											onclick={() => goto(`/user/${comment.userId}`)}
+											onclick={() => goto(`/user/${comment.userUsername}`)}
 										>
 											{comment.userName}
 										</HoverCard.Trigger>
 										<HoverCard.Content class="w-80" side="top" sideOffset={3}>
-											<div class="flex justify-between space-x-4">
-												<Avatar.Root class="h-14 w-14">
-													<Avatar.Image
-														src={getPublicUrl(comment.userImage)}
-														alt={comment.userName}
-													/>
-													<Avatar.Fallback>{comment.userName?.charAt(0) || '?'}</Avatar.Fallback>
-												</Avatar.Root>
-												<div class="flex-1 space-y-1">
-													<h4 class="text-sm font-semibold">{comment.userName}</h4>
-													<p class="text-muted-foreground text-sm">@{comment.userUsername}</p>
-													{#if comment.userBio}
-														<p class="text-sm">{comment.userBio}</p>
-													{/if}
-													<div class="flex items-center pt-2">
-														<CalendarDays class="mr-2 h-4 w-4 opacity-70" />
-														<span class="text-muted-foreground text-xs">
-															Joined {new Date(comment.userCreatedAt).toLocaleDateString('en-US', {
-																year: 'numeric',
-																month: 'long'
-															})}
-														</span>
-													</div>
-												</div>
-											</div>
+											<UserProfilePreview userId={comment.userId} />
 										</HoverCard.Content>
 									</HoverCard.Root>
-									<button onclick={() => goto(`/user/${comment.userId}`)} class="cursor-pointer">
+									<button
+										onclick={() => goto(`/user/${comment.userUsername}`)}
+										class="cursor-pointer"
+									>
 										<Badge variant="outline" class="text-xs">
 											@{comment.userUsername}
 										</Badge>

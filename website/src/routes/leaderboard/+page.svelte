@@ -1,9 +1,9 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
+	import DataTable from '$lib/components/self/DataTable.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -53,6 +53,147 @@
 		if (liquidityRatio < 0.5) return { text: '50%+ illiquid', color: 'text-yellow-600' };
 		return { text: 'Mostly liquid', color: 'text-success' };
 	}
+
+	const rugpullersColumns = [
+		{
+			key: 'rank',
+			label: 'Rank',
+			render: (value: any, row: any, index: number) => {
+				const rankInfo = getRankIcon(index);
+				return {
+					component: 'rank',
+					icon: rankInfo.icon,
+					color: rankInfo.color,
+					number: index + 1
+				};
+			}
+		},
+		{
+			key: 'user',
+			label: 'User',
+			render: (value: any, row: any) => ({
+				component: 'user',
+				image: row.image,
+				name: row.name,
+				username: row.username
+			})
+		},
+		{
+			key: 'totalExtracted',
+			label: 'Profit',
+			class: 'text-success font-mono text-sm font-bold',
+			render: (value: any) => formatValue(value)
+		}
+	];
+
+	const losersColumns = [
+		{
+			key: 'rank',
+			label: 'Rank',
+			render: (value: any, row: any, index: number) => {
+				const rankInfo = getRankIcon(index);
+				return {
+					component: 'rank',
+					icon: rankInfo.icon,
+					color: rankInfo.color,
+					number: index + 1
+				};
+			}
+		},
+		{
+			key: 'user',
+			label: 'User',
+			render: (value: any, row: any) => ({
+				component: 'user',
+				image: row.image,
+				name: row.name,
+				username: row.username
+			})
+		},
+		{
+			key: 'totalLoss',
+			label: 'Loss',
+			class: 'text-destructive font-mono text-sm font-bold',
+			render: (value: any) => `-${formatValue(value)}`
+		}
+	];
+
+	const cashKingsColumns = [
+		{
+			key: 'rank',
+			label: 'Rank',
+			render: (value: any, row: any, index: number) => {
+				const rankInfo = getRankIcon(index);
+				return {
+					component: 'rank',
+					icon: rankInfo.icon,
+					color: rankInfo.color,
+					number: index + 1
+				};
+			}
+		},
+		{
+			key: 'user',
+			label: 'User',
+			render: (value: any, row: any) => ({
+				component: 'user',
+				image: row.image,
+				name: row.name,
+				username: row.username
+			})
+		},
+		{
+			key: 'baseCurrencyBalance',
+			label: 'Cash',
+			class: 'text-success font-mono text-sm font-bold',
+			render: (value: any) => formatValue(value)
+		}
+	];
+
+	const millionairesColumns = [
+		{
+			key: 'rank',
+			label: 'Rank',
+			render: (value: any, row: any, index: number) => {
+				const rankInfo = getRankIcon(index);
+				return {
+					component: 'rank',
+					icon: rankInfo.icon,
+					color: rankInfo.color,
+					number: index + 1
+				};
+			}
+		},
+		{
+			key: 'user',
+			label: 'User',
+			render: (value: any, row: any) => ({
+				component: 'user',
+				image: row.image,
+				name: row.name,
+				username: row.username
+			})
+		},
+		{
+			key: 'totalPortfolioValue',
+			label: 'Portfolio',
+			class: 'text-success font-mono text-sm font-bold',
+			render: (value: any) => formatValue(value)
+		},
+		{
+			key: 'liquidityRatio',
+			label: 'Liquidity',
+			render: (value: any) => {
+				const info = getLiquidityWarning(value);
+				return {
+					component: 'badge',
+					variant: 'secondary',
+					class: `text-xs ${info.color}`,
+					text: info.text
+				};
+			}
+		}
+	];
 </script>
 
 <svelte:head>
@@ -100,54 +241,13 @@
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					{#if leaderboardData.topRugpullers.length === 0}
-						<div class="py-8 text-center">
-							<p class="text-muted-foreground">No major profits recorded today</p>
-						</div>
-					{:else}
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Rank</Table.Head>
-									<Table.Head>User</Table.Head>
-									<Table.Head>Profit</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each leaderboardData.topRugpullers as user, index}
-									{@const rankInfo = getRankIcon(index)}
-									<Table.Row
-										class="hover:bg-muted/50 cursor-pointer transition-colors"
-										onclick={() => goto(`/user/${user.userId}`)}
-									>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<rankInfo.icon class="h-4 w-4 {rankInfo.color}" />
-												<span class="font-mono text-sm">#{index + 1}</span>
-											</div>
-										</Table.Cell>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<Avatar.Root class="h-6 w-6">
-													<Avatar.Image src={getPublicUrl(user.image)} alt={user.name} />
-													<Avatar.Fallback class="bg-muted text-muted-foreground text-xs"
-														>{user.name?.charAt(0) || '?'}</Avatar.Fallback
-													>
-												</Avatar.Root>
-												<div>
-													<p class="text-sm font-medium">{user.name}</p>
-													<p class="text-muted-foreground text-xs">@{user.username}</p>
-												</div>
-											</div>
-										</Table.Cell>
-										<Table.Cell class="text-success font-mono text-sm font-bold">
-											{formatValue(user.totalExtracted)}
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					{/if}
+					<DataTable
+						columns={rugpullersColumns}
+						data={leaderboardData.topRugpullers}
+						onRowClick={(user) => goto(`/user/${user.userUsername || user.username}`)}
+						emptyMessage="No major profits recorded today"
+						enableUserPreview={true}
+					/>
 				</Card.Content>
 			</Card.Root>
 
@@ -161,56 +261,13 @@
 					<Card.Description>Users who experienced the largest losses today</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					{#if leaderboardData.biggestLosers.length === 0}
-						<div class="py-8 text-center">
-							<p class="text-muted-foreground">
-								No major losses recorded today
-							</p>
-						</div>
-					{:else}
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Rank</Table.Head>
-									<Table.Head>User</Table.Head>
-									<Table.Head>Loss</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each leaderboardData.biggestLosers as user, index}
-									{@const rankInfo = getRankIcon(index)}
-									<Table.Row
-										class="hover:bg-muted/50 cursor-pointer transition-colors"
-										onclick={() => goto(`/user/${user.userId}`)}
-									>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<rankInfo.icon class="h-4 w-4 {rankInfo.color}" />
-												<span class="font-mono text-sm">#{index + 1}</span>
-											</div>
-										</Table.Cell>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<Avatar.Root class="h-6 w-6">
-													<Avatar.Image src={getPublicUrl(user.image)} alt={user.name} />
-													<Avatar.Fallback class="bg-muted text-muted-foreground text-xs"
-														>{user.name?.charAt(0) || '?'}</Avatar.Fallback
-													>
-												</Avatar.Root>
-												<div>
-													<p class="text-sm font-medium">{user.name}</p>
-													<p class="text-muted-foreground text-xs">@{user.username}</p>
-												</div>
-											</div>
-										</Table.Cell>
-										<Table.Cell class="text-destructive font-mono text-sm font-bold">
-											-{formatValue(user.totalLoss)}
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					{/if}
+					<DataTable
+						columns={losersColumns}
+						data={leaderboardData.biggestLosers}
+						onRowClick={(user) => goto(`/user/${user.userUsername || user.username}`)}
+						emptyMessage="No major losses recorded today"
+						enableUserPreview={true}
+					/>
 				</Card.Content>
 			</Card.Root>
 
@@ -224,54 +281,13 @@
 					<Card.Description>Users with the highest liquid cash balances</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					{#if leaderboardData.cashKings.length === 0}
-						<div class="py-8 text-center">
-							<p class="text-muted-foreground">Everyone's invested! 💸</p>
-						</div>
-					{:else}
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Rank</Table.Head>
-									<Table.Head>User</Table.Head>
-									<Table.Head>Cash</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each leaderboardData.cashKings as user, index}
-									{@const rankInfo = getRankIcon(index)}
-									<Table.Row
-										class="hover:bg-muted/50 cursor-pointer transition-colors"
-										onclick={() => goto(`/user/${user.userId}`)}
-									>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<rankInfo.icon class="h-4 w-4 {rankInfo.color}" />
-												<span class="font-mono text-sm">#{index + 1}</span>
-											</div>
-										</Table.Cell>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<Avatar.Root class="h-6 w-6">
-													<Avatar.Image src={getPublicUrl(user.image)} alt={user.name} />
-													<Avatar.Fallback class="bg-muted text-muted-foreground text-xs"
-														>{user.name?.charAt(0) || '?'}</Avatar.Fallback
-													>
-												</Avatar.Root>
-												<div>
-													<p class="text-sm font-medium">{user.name}</p>
-													<p class="text-muted-foreground text-xs">@{user.username}</p>
-												</div>
-											</div>
-										</Table.Cell>
-										<Table.Cell class="text-success font-mono text-sm font-bold">
-											{formatValue(user.baseCurrencyBalance)}
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					{/if}
+					<DataTable
+						columns={cashKingsColumns}
+						data={leaderboardData.cashKings}
+						onRowClick={(user) => goto(`/user/${user.userUsername || user.username}`)}
+						emptyMessage="Everyone's invested! 💸"
+						enableUserPreview={true}
+					/>
 				</Card.Content>
 			</Card.Root>
 
@@ -287,61 +303,13 @@
 					>
 				</Card.Header>
 				<Card.Content>
-					{#if leaderboardData.paperMillionaires.length === 0}
-						<div class="py-8 text-center">
-							<p class="text-muted-foreground">No large portfolios yet! 📉</p>
-						</div>
-					{:else}
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Rank</Table.Head>
-									<Table.Head>User</Table.Head>
-									<Table.Head>Portfolio</Table.Head>
-									<Table.Head>Liquidity</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each leaderboardData.paperMillionaires as user, index}
-									{@const rankInfo = getRankIcon(index)}
-									{@const liquidityInfo = getLiquidityWarning(user.liquidityRatio)}
-									<Table.Row
-										class="hover:bg-muted/50 cursor-pointer transition-colors"
-										onclick={() => goto(`/user/${user.userId}`)}
-									>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<rankInfo.icon class="h-4 w-4 {rankInfo.color}" />
-												<span class="font-mono text-sm">#{index + 1}</span>
-											</div>
-										</Table.Cell>
-										<Table.Cell>
-											<div class="flex items-center gap-2">
-												<Avatar.Root class="h-6 w-6">
-													<Avatar.Image src={getPublicUrl(user.image)} alt={user.name} />
-													<Avatar.Fallback class="bg-muted text-muted-foreground text-xs"
-														>{user.name?.charAt(0) || '?'}</Avatar.Fallback
-													>
-												</Avatar.Root>
-												<div>
-													<p class="text-sm font-medium">{user.name}</p>
-													<p class="text-muted-foreground text-xs">@{user.username}</p>
-												</div>
-											</div>
-										</Table.Cell>
-										<Table.Cell class="text-success font-mono text-sm font-bold">
-											{formatValue(user.totalPortfolioValue)}
-										</Table.Cell>
-										<Table.Cell>
-											<Badge variant="secondary" class="text-xs {liquidityInfo.color}">
-												{liquidityInfo.text}
-											</Badge>
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					{/if}
+					<DataTable
+						columns={millionairesColumns}
+						data={leaderboardData.paperMillionaires}
+						onRowClick={(user) => goto(`/user/${user.userUsername || user.username}`)}
+						emptyMessage="No large portfolios yet! 📉"
+						enableUserPreview={true}
+					/>
 				</Card.Content>
 			</Card.Root>
 		</div>

@@ -6,6 +6,7 @@
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import TradeModal from '$lib/components/self/TradeModal.svelte';
 	import CommentSection from '$lib/components/self/CommentSection.svelte';
+	import UserProfilePreview from '$lib/components/self/UserProfilePreview.svelte';
 	import {
 		TrendingUp,
 		TrendingDown,
@@ -28,13 +29,13 @@
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { fetchPortfolioData } from '$lib/stores/portfolio-data';
+	import { getPublicUrl } from '$lib/utils.js';
 
 	const { data } = $props();
 	const coinSymbol = data.coinSymbol;
 
 	let coin = $state<any>(null);
 	let loading = $state(true);
-	let creatorImageUrl = $state<string | null>(null);
 	let chartData = $state<any[]>([]);
 	let volumeData = $state<any[]>([]);
 	let userHolding = $state(0);
@@ -61,15 +62,6 @@
 			chartData = result.candlestickData || [];
 			volumeData = result.volumeData || [];
 
-			if (coin.creatorId) {
-				try {
-					const imageResponse = await fetch(`/api/user/${coin.creatorId}/image`);
-					const imageResult = await imageResponse.json();
-					creatorImageUrl = imageResult.url;
-				} catch (e) {
-					console.error('Failed to load creator image:', e);
-				}
-			}
 		} catch (e) {
 			console.error('Failed to fetch coin data:', e);
 			toast.error('Failed to load coin data');
@@ -339,37 +331,16 @@
 					<HoverCard.Root>
 						<HoverCard.Trigger
 							class="flex cursor-pointer items-center gap-1 rounded-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-8"
-							onclick={() => goto(`/user/${coin.creatorId}`)}
+							onclick={() => goto(`/user/${coin.creatorUsername}`)}
 						>
 							<Avatar.Root class="h-4 w-4">
-								<Avatar.Image src={creatorImageUrl} alt={coin.creatorName} />
+								<Avatar.Image src={getPublicUrl(coin.creatorImage)} alt={coin.creatorName} />
 								<Avatar.Fallback>{coin.creatorName.charAt(0)}</Avatar.Fallback>
 							</Avatar.Root>
 							<span class="font-medium">{coin.creatorName} (@{coin.creatorUsername})</span>
 						</HoverCard.Trigger>
 						<HoverCard.Content class="w-80" side="bottom" sideOffset={3}>
-							<div class="flex justify-between space-x-4">
-								<Avatar.Root class="h-14 w-14">
-									<Avatar.Image src={creatorImageUrl} alt={coin.creatorName} />
-									<Avatar.Fallback>{coin.creatorName.charAt(0)}</Avatar.Fallback>
-								</Avatar.Root>
-								<div class="flex-1 space-y-1">
-									<h4 class="text-sm font-semibold">{coin.creatorName}</h4>
-									<p class="text-muted-foreground text-sm">@{coin.creatorUsername}</p>
-									{#if coin.creatorBio}
-										<p class="text-sm">{coin.creatorBio}</p>
-									{/if}
-									<div class="flex items-center pt-2">
-										<CalendarDays class="mr-2 h-4 w-4 opacity-70" />
-										<span class="text-muted-foreground text-xs">
-											Joined {new Date(coin.creatorCreatedAt).toLocaleDateString('en-US', {
-												year: 'numeric',
-												month: 'long'
-											})}
-										</span>
-									</div>
-								</div>
-							</div>
+							<UserProfilePreview userId={coin.creatorId} />
 						</HoverCard.Content>
 					</HoverCard.Root>
 				</div>
