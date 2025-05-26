@@ -3,6 +3,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import {
 		Moon,
 		Sun,
@@ -18,7 +19,10 @@
 		BellIcon,
 		LogOutIcon,
 		Wallet,
-		Trophy
+		Trophy,
+		Activity,
+		TrendingUp,
+		TrendingDown
 	} from 'lucide-svelte';
 	import { mode, setMode } from 'mode-watcher';
 	import type { HTMLAttributes } from 'svelte/elements';
@@ -28,8 +32,9 @@
 	import SignInConfirmDialog from './SignInConfirmDialog.svelte';
 	import DailyRewards from './DailyRewards.svelte';
 	import { signOut } from '$lib/auth-client';
-	import { getPublicUrl } from '$lib/utils';
+	import { formatValue, getPublicUrl } from '$lib/utils';
 	import { goto } from '$app/navigation';
+	import { liveTradesStore, isLoadingTrades, type LiveTrade } from '$lib/stores/websocket';
 
 	const data = {
 		navMain: [
@@ -46,7 +51,6 @@
 	const { setOpenMobile, isMobile } = useSidebar();
 	let shouldSignIn = $state(false);
 
-	// Fetch portfolio data when user is authenticated
 	$effect(() => {
 		if ($USER_DATA) {
 			fetchPortfolioData();
@@ -69,6 +73,16 @@
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2
 		});
+	}
+
+	function handleLiveTradesClick() {
+		goto('/live');
+		setOpenMobile(false);
+	}
+
+	function handleTradeClick(coinSymbol: string) {
+		goto(`/coin/${coinSymbol.toLowerCase()}`);
+		setOpenMobile(false);
 	}
 </script>
 
@@ -142,44 +156,148 @@
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
 				</Sidebar.Menu>
-			</Sidebar.GroupContent>		</Sidebar.Group>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
 
 		<!-- Daily Rewards -->
 		{#if $USER_DATA}
 			<Sidebar.Group>
 				<Sidebar.GroupContent>
 					<div class="px-2 py-1">
-						<DailyRewards />
+						{#if !$PORTFOLIO_DATA}
+							<div class="space-y-2">
+								<Skeleton class="h-8 w-full rounded" />
+							</div>
+						{:else}
+							<DailyRewards />
+						{/if}
 					</div>
 				</Sidebar.GroupContent>
 			</Sidebar.Group>
 		{/if}
 
+		<!-- Live Trades -->
+		<Sidebar.Group>
+			<Sidebar.GroupLabel class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<Activity class="h-4 w-4" />
+					<span>Live Trades</span>
+				</div>
+				<button
+					onclick={handleLiveTradesClick}
+					class="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition-colors"
+				>
+					View All
+				</button>
+			</Sidebar.GroupLabel>
+			<Sidebar.GroupContent>
+				<div class="space-y-1 px-2 py-1">
+					{#if $isLoadingTrades}
+						{#each Array(5) as _, i}
+							<div class="flex items-center gap-2 py-1 text-xs">
+								<div class="flex items-center gap-1">
+									<Skeleton class="h-3 w-3 rounded-full" />
+									<Skeleton class="h-4 w-8" />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center gap-1">
+										<Skeleton class="h-3 w-12" />
+										<Skeleton class="h-3 w-28" />
+									</div>
+								</div>
+							</div>
+						{/each}
+					{:else if $liveTradesStore.length === 0}
+						<div class="text-muted-foreground py-2 text-center text-xs">No big trades yet...</div>
+					{:else}
+						{#each $liveTradesStore.slice(0, 5) as trade, index (`${trade.timestamp}-${trade.username}-${trade.coinSymbol}-${index}`)}
+							<button
+								onclick={() => handleTradeClick(trade.coinSymbol)}
+								class="hover:bg-muted/50 flex w-full cursor-pointer items-center gap-2 rounded px-1 py-1 text-left text-xs transition-colors"
+							>
+								<div class="flex items-center gap-1">
+									{#if trade.type === 'BUY'}
+										<TrendingUp class="h-3 w-3 text-green-500" />
+										<Badge
+											variant="outline"
+											class="h-4 border-green-500 px-1 py-0 text-[10px] text-green-500"
+										>
+											BUY
+										</Badge>
+									{:else}
+										<TrendingDown class="h-3 w-3 text-red-500" />
+										<Badge
+											variant="outline"
+											class="h-4 border-red-500 px-1 py-0 text-[10px] text-red-500"
+										>
+											SELL
+										</Badge>
+									{/if}
+								</div>
+								<div class="flex-1 truncate">
+									<div class="flex items-center gap-1">
+										<span class="text-foreground font-medium">
+											{formatValue(trade.totalValue)}
+										</span>
+										<span class="text-muted-foreground">*{trade.coinSymbol}</span>
+										<span class="text-muted-foreground">by</span>
+										<span class="text-muted-foreground">@{trade.username}</span>
+									</div>
+								</div>
+							</button>
+						{/each}
+					{/if}
+				</div>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
+
 		<!-- Portfolio Summary -->
-		{#if $USER_DATA && $PORTFOLIO_DATA}
+		{#if $USER_DATA}
 			<Sidebar.Group>
 				<Sidebar.GroupLabel>Portfolio</Sidebar.GroupLabel>
 				<Sidebar.GroupContent>
-					<div class="px-2 py-1 space-y-2">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
-								<Wallet class="h-4 w-4 text-muted-foreground" />
-								<span class="text-sm font-medium">Total Value</span>
+					<div class="space-y-2 px-2 py-1">
+						{#if !$PORTFOLIO_DATA}
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<Skeleton class="h-4 w-4 rounded" />
+									<Skeleton class="h-4 w-16" />
+								</div>
+								<Skeleton class="h-5 w-16 rounded" />
 							</div>
-							<Badge variant="secondary" class="font-mono">
-								${formatCurrency($PORTFOLIO_DATA.totalValue)}
-							</Badge>
-						</div>
-						<div class="space-y-1 text-xs text-muted-foreground">
-							<div class="flex justify-between">
-								<span>Cash:</span>
-								<span class="font-mono">${formatCurrency($PORTFOLIO_DATA.baseCurrencyBalance)}</span>
+							<div class="space-y-1">
+								<div class="flex justify-between">
+									<Skeleton class="h-3 w-8" />
+									<Skeleton class="h-3 w-12" />
+								</div>
+								<div class="flex justify-between">
+									<Skeleton class="h-3 w-10" />
+									<Skeleton class="h-3 w-12" />
+								</div>
 							</div>
-							<div class="flex justify-between">
-								<span>Coins:</span>
-								<span class="font-mono">${formatCurrency($PORTFOLIO_DATA.totalCoinValue)}</span>
+						{:else}
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<Wallet class="text-muted-foreground h-4 w-4" />
+									<span class="text-sm font-medium">Total Value</span>
+								</div>
+								<Badge variant="secondary" class="font-mono">
+									${formatCurrency($PORTFOLIO_DATA.totalValue)}
+								</Badge>
 							</div>
-						</div>
+							<div class="text-muted-foreground space-y-1 text-xs">
+								<div class="flex justify-between">
+									<span>Cash:</span>
+									<span class="font-mono"
+										>${formatCurrency($PORTFOLIO_DATA.baseCurrencyBalance)}</span
+									>
+								</div>
+								<div class="flex justify-between">
+									<span>Coins:</span>
+									<span class="font-mono">${formatCurrency($PORTFOLIO_DATA.totalCoinValue)}</span>
+								</div>
+							</div>
+						{/if}
 					</div>
 				</Sidebar.GroupContent>
 			</Sidebar.Group>

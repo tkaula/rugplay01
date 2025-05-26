@@ -11,6 +11,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { ModeWatcher } from 'mode-watcher';
 	import { page } from '$app/state';
+	import { websocketController } from '$lib/stores/websocket';
 
 	let { data, children } = $props<{
 		data: { userSession?: any };
@@ -26,6 +27,8 @@
 	});
 
 	onMount(() => {
+		websocketController.connect();
+
 		console.log(
 			`%c                                       .--                    
                                       .=--:                   
@@ -69,6 +72,10 @@
 			window.history.replaceState({}, '', url);
 			invalidateAll();
 		}
+
+		return () => {
+			websocketController.disconnect();
+		};
 	});
 
 	function getPageTitle(routeId: string | null): string {

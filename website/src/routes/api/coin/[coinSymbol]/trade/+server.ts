@@ -3,6 +3,7 @@ import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { coin, userPortfolio, user, transaction, priceHistory } from '$lib/server/db/schema';
 import { eq, and, gte } from 'drizzle-orm';
+import { redis } from '$lib/server/redis';
 
 async function calculate24hMetrics(coinId: number, currentPrice: number) {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -74,7 +75,11 @@ export async function POST({ params, request }) {
         throw error(400, 'This coin is delisted and cannot be traded');
     }
 
-    const [userData] = await db.select({ baseCurrencyBalance: user.baseCurrencyBalance }).from(user).where(eq(user.id, userId)).limit(1);
+    const [userData] = await db.select({
+        baseCurrencyBalance: user.baseCurrencyBalance,
+        username: user.username,
+        image: user.image
+    }).from(user).where(eq(user.id, userId)).limit(1);
 
     if (!userData) {
         throw error(404, 'User not found');
@@ -176,6 +181,34 @@ export async function POST({ params, request }) {
                 })
                 .where(eq(coin.id, coinData.id));
         });
+
+        // REDIS
+        const tradeData = {
+            type: 'BUY',
+            username: userData.username,
+            userImage: userData.image || '',
+            amount: coinsBought,
+            coinSymbol: normalizedSymbol,
+            coinName: coinData.name,
+            coinIcon: coinData.icon || '',
+            totalValue: totalCost,
+            price: newPrice,
+            timestamp: Date.now(),
+            userId: userId.toString()
+        };
+
+        await redis.publish('trades:all', JSON.stringify({
+            type: 'all-trades',
+            data: tradeData
+        }));
+
+        if (totalCost >= 1000) {
+            await redis.publish('trades:large', JSON.stringify({
+                type: 'live-trade',
+                data: tradeData
+            }));
+        }
+        // End REDIS
 
         return json({
             success: true,
@@ -281,6 +314,34 @@ export async function POST({ params, request }) {
                 })
                 .where(eq(coin.id, coinData.id));
         });
+
+        // REDIS
+        const tradeData = {
+            type: 'SELL',
+            username: userData.username,
+            userImage: userData.image || '',
+            amount: amount,
+            coinSymbol: normalizedSymbol,
+            coinName: coinData.name,
+            coinIcon: coinData.icon || '',
+            totalValue: totalCost,
+            price: newPrice,
+            timestamp: Date.now(),
+            userId: userId.toString()
+        };
+
+        await redis.publish('trades:all', JSON.stringify({
+            type: 'all-trades',
+            data: tradeData
+        }));
+
+        if (totalCost >= 1000) {
+            await redis.publish('trades:large', JSON.stringify({
+                type: 'live-trade',
+                data: tradeData
+            }));
+        }
+        // End REDIS
 
         return json({
             success: true,

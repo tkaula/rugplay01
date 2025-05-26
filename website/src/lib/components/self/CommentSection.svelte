@@ -12,7 +12,7 @@
 	import { formatTimeAgo, getPublicUrl } from '$lib/utils';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
 	import UserProfilePreview from '$lib/components/self/UserProfilePreview.svelte';
-	import WebSocket, { type WebSocketHandle } from '$lib/components/self/WebSocket.svelte';
+	import { websocketController } from '$lib/stores/websocket';
 
 	const { coinSymbol } = $props<{ coinSymbol: string }>();
 	import type { Comment } from '$lib/types/comment';
@@ -21,7 +21,15 @@
 	let isSubmitting = $state(false);
 	let isLoading = $state(true);
 	let shouldSignIn = $state(false);
-	let wsManager = $state<WebSocketHandle | undefined>();
+
+	$effect(() => {
+		websocketController.setCoin(coinSymbol);
+		websocketController.subscribeToComments(coinSymbol, handleWebSocketMessage);
+
+		return () => {
+			websocketController.unsubscribeFromComments(coinSymbol);
+		};
+	});
 
 	function handleWebSocketMessage(message: { type: string; data?: any }) {
 		switch (message.type) {
@@ -46,13 +54,6 @@
 				}
 				break;
 		}
-	}
-
-	function handleWebSocketOpen() {
-		wsManager?.send({
-			type: 'set_coin',
-			coinSymbol
-		});
 	}
 
 	async function loadComments() {
@@ -150,13 +151,6 @@
 </script>
 
 <SignInConfirmDialog bind:open={shouldSignIn} />
-
-<WebSocket
-	bind:this={wsManager}
-	onMessage={handleWebSocketMessage}
-	onOpen={handleWebSocketOpen}
-	disableReconnect={true}
-/>
 
 <Card.Root>
 	<Card.Header>

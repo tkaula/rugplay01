@@ -141,26 +141,24 @@
 	}
 </script>
 
-{#if $USER_DATA && rewardStatus}
-	<Button
-		onclick={claimReward}
-		disabled={claimState === 'loading' || !rewardStatus.canClaim}
-		class="w-full transition-all duration-300"
-		size="sm"
-		variant={claimState === 'success' ? 'secondary' : rewardStatus.canClaim ? 'default' : 'outline'}
-	>
-		{#if claimState === 'loading'}
-			<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
-			<span>Claiming...</span>
-		{:else if claimState === 'success'}
-			<CheckCircle class="h-4 w-4" />
-			<span>Claimed!</span>
-		{:else if rewardStatus.canClaim}
-			<Gift class="h-4 w-4" />
-			<span>Claim ${formatCurrency(rewardStatus.rewardAmount)}</span>
-		{:else}
-			<Clock class="h-4 w-4" />
-			<span>Next in {formatTimeRemaining(rewardStatus.timeRemaining)}</span>
-		{/if}
-	</Button>
-{/if}
+<Button
+	onclick={claimReward}
+	disabled={claimState === 'loading' || !rewardStatus?.canClaim}
+	class="w-full transition-all duration-300"
+	size="sm"
+	variant={claimState === 'success' ? 'secondary' : rewardStatus?.canClaim ? 'default' : 'outline'}
+>
+	{#if !rewardStatus || claimState === 'loading'}
+		<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
+		<span>{!rewardStatus ? 'Loading...' : 'Claiming...'}</span>
+	{:else if claimState === 'success'}
+		<CheckCircle class="h-4 w-4" />
+		<span>Claimed!</span>
+	{:else if rewardStatus.canClaim}
+		<Gift class="h-4 w-4" />
+		<span>Claim ${formatCurrency(rewardStatus.rewardAmount)}</span>
+	{:else}
+		<Clock class="h-4 w-4" />
+		<span>Next in {formatTimeRemaining(rewardStatus.timeRemaining)}</span>
+	{/if}
+</Button>

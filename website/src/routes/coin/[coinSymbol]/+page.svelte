@@ -22,6 +22,7 @@
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { fetchPortfolioData } from '$lib/stores/portfolio-data';
 	import { getPublicUrl } from '$lib/utils.js';
+	import { websocketController } from '$lib/stores/websocket';
 
 	const { data } = $props();
 	const coinSymbol = data.coinSymbol;
@@ -38,6 +39,8 @@
 	onMount(async () => {
 		await loadCoinData();
 		await loadUserHolding();
+
+		websocketController.setCoin(coinSymbol.toUpperCase());
 	});
 
 	async function loadCoinData() {
