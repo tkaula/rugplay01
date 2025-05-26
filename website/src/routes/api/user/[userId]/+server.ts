@@ -53,16 +53,26 @@ export async function GET({ params }) {
             .limit(10);
 
         // get portfolio value and holdings count
-        const portfolioStats = await db
+        const portfolioHoldings = await db
             .select({
-                holdingsCount: count(),
-                totalValue: sql<number>`COALESCE(SUM(CAST(${userPortfolio.quantity} AS NUMERIC) * CAST(${coin.currentPrice} AS NUMERIC)), 0)`
+                quantity: userPortfolio.quantity,
+                currentPrice: coin.currentPrice
             })
             .from(userPortfolio)
             .innerJoin(coin, eq(userPortfolio.coinId, coin.id))
             .where(eq(userPortfolio.userId, actualUserId));
 
-        // get recent transactions
+        const holdingsValue = portfolioHoldings.reduce((total, holding) => {
+            const quantity = Number(holding.quantity);
+            const price = Number(holding.currentPrice);
+            return total + (quantity * price);
+        }, 0);
+
+        const portfolioStats = {
+            holdingsCount: portfolioHoldings.length,
+            totalValue: holdingsValue
+        };
+
         const recentTransactions = await db
             .select({
                 id: transaction.id,
@@ -81,10 +91,9 @@ export async function GET({ params }) {
             .orderBy(desc(transaction.timestamp))
             .limit(10);
 
-        // calc total portfolio value
         const baseCurrencyBalance = parseFloat(userProfile.baseCurrencyBalance);
-        const holdingsValue = portfolioStats[0]?.totalValue || 0;
-        const totalPortfolioValue = baseCurrencyBalance + holdingsValue;
+        const calculatedHoldingsValue = portfolioStats.totalValue || 0;
+        const totalPortfolioValue = baseCurrencyBalance + calculatedHoldingsValue;
 
         // get all transaction statistics
         const transactionStats = await db
@@ -116,12 +125,11 @@ export async function GET({ params }) {
                 ...userProfile,
                 baseCurrencyBalance,
                 totalPortfolioValue,
-            },
-            stats: {
+            }, stats: {
                 totalPortfolioValue,
                 baseCurrencyBalance,
-                holdingsValue,
-                holdingsCount: portfolioStats[0]?.holdingsCount || 0,
+                holdingsValue: calculatedHoldingsValue,
+                holdingsCount: portfolioStats.holdingsCount || 0,
                 coinsCreated: createdCoins.length,
                 totalTransactions: transactionStats[0]?.totalTransactions || 0,
                 totalBuyVolume: transactionStats[0]?.totalBuyVolume || 0,
