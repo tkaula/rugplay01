@@ -1,0 +1,166 @@
+<script lang="ts">
+	import { Button } from '$lib/components/ui/button';
+	import { Gift, Clock, CheckCircle, Flame } from 'lucide-svelte';
+	import { USER_DATA } from '$lib/stores/user-data';
+	import { fetchPortfolioData } from '$lib/stores/portfolio-data';
+	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
+
+	interface RewardStatus {
+		canClaim: boolean;
+		rewardAmount: number;
+		baseReward: number;
+		timeRemaining: number;
+		nextClaimTime: string | null;
+		totalRewardsClaimed: number;
+		lastRewardClaim: string | null;
+		loginStreak: number;
+	}
+
+	type ClaimState = 'idle' | 'loading' | 'success';
+
+	let rewardStatus = $state<RewardStatus | null>(null);
+	let claimState = $state<ClaimState>('idle');
+	let error = $state<string | null>(null);
+
+	$effect(() => {
+		if ($USER_DATA) {
+			fetchRewardStatus();
+			const interval = setInterval(() => {
+				if (rewardStatus && !rewardStatus.canClaim) {
+					fetchRewardStatus();
+				}
+			}, 60000);
+
+			return () => clearInterval(interval);
+		}
+	});
+
+	async function fetchRewardStatus() {
+		try {
+			const response = await fetch('/api/rewards/claim');
+			if (response.ok) {
+				rewardStatus = await response.json();
+				error = null;
+			} else {
+				error = 'Failed to fetch reward status';
+			}
+		} catch (err) {
+			error = 'Network error';
+			console.error('Error fetching reward status:', err);
+		}
+	}
+
+	async function claimReward() {
+		if (!rewardStatus?.canClaim || claimState === 'loading') return;
+
+		claimState = 'loading';
+		error = null;
+
+		try {
+			const response = await fetch('/api/rewards/claim', {
+				method: 'POST'
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				claimState = 'success';
+
+				toast.success(`Daily reward claimed! +$${formatCurrency(result.rewardAmount)}`, {
+					description:
+						rewardStatus.loginStreak > 0
+							? `Login streak: ${rewardStatus.loginStreak} days 🔥`
+							: undefined,
+					action: {
+						label: 'View Portfolio',
+						onClick: () => {
+							goto('/portfolio');
+						}
+					}
+				});
+
+				if ($USER_DATA) {
+					await fetchPortfolioData();
+				}
+
+				await fetchRewardStatus();
+
+				setTimeout(() => {
+					claimState = 'idle';
+				}, 1000);
+			} else {
+				const errorData = await response.json();
+				if (response.status === 429 && errorData.timeRemaining) {
+					await fetchRewardStatus();
+
+					const hours = Math.floor(errorData.timeRemaining / (60 * 60 * 1000));
+					const minutes = Math.floor((errorData.timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
+					const timeText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+					const streakDescription =
+						rewardStatus?.loginStreak > 0
+							? `Login streak: ${rewardStatus.loginStreak} days 🔥. Next reward available in ${timeText}. Come back later!`
+							: `Next reward available in ${timeText}. Come back later!`;
+
+					toast.info('Daily reward on cooldown', {
+						description: streakDescription
+					});
+				} else {
+					error = errorData.error || errorData.message || 'Failed to claim reward';
+					toast.error('Failed to claim reward');
+				}
+			}
+		} catch (err) {
+			error = 'Network error';
+			toast.error('Network error', {
+				description: 'Please check your connection and try again.'
+			});
+			console.error('Error claiming reward:', err);
+		} finally {
+			if (claimState !== 'success') {
+				claimState = 'idle';
+			}
+		}
+	}
+
+	function formatTimeRemaining(timeMs: number): string {
+		const hours = Math.floor(timeMs / (60 * 60 * 1000));
+		const minutes = Math.floor((timeMs % (60 * 60 * 1000)) / (60 * 1000));
+
+		if (hours > 0) {
+			return `${hours}h ${minutes}m`;
+		}
+		return `${minutes}m`;
+	}
+
+	function formatCurrency(value: number): string {
+		return value.toLocaleString('en-US', {
+			minimumFractionDigits: 0,
+			maximumFractionDigits: 0
+		});
+	}
+</script>
+
+{#if $USER_DATA && rewardStatus}
+	<Button
+		onclick={claimReward}
+		disabled={claimState === 'loading' || !rewardStatus.canClaim}
+		class="w-full transition-all duration-300"
+		size="sm"
+		variant={claimState === 'success' ? 'secondary' : rewardStatus.canClaim ? 'default' : 'outline'}
+	>
+		{#if claimState === 'loading'}
+			<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
+			<span>Claiming...</span>
+		{:else if claimState === 'success'}
+			<CheckCircle class="h-4 w-4" />
+			<span>Claimed!</span>
+		{:else if rewardStatus.canClaim}
+			<Gift class="h-4 w-4" />
+			<span>Claim ${formatCurrency(rewardStatus.rewardAmount)}</span>
+		{:else}
+			<Clock class="h-4 w-4" />
+			<span>Next in {formatTimeRemaining(rewardStatus.timeRemaining)}</span>
+		{/if}
+	</Button>
+{/if}

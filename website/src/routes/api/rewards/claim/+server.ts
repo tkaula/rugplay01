@@ -1,0 +1,155 @@
+import { auth } from '$lib/auth';
+import { error, json } from '@sveltejs/kit';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
+import type { RequestHandler } from './$types';
+
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+const THIRTY_SIX_HOURS_MS = 36 * 60 * 60 * 1000;
+
+const REWARD_TIERS = [
+    1200,   // Day 1
+    1500,   // Day 2
+    1800,   // Day 3
+    2100,   // Day 4
+    2500,  // Day 5
+    3000,  // Day 6
+    3500,  // Day 7
+    4000,  // Day 8+
+];
+
+function calculateStreak(lastClaim: Date | null, currentStreak: number): number {
+    if (!lastClaim) return 1;
+
+    const timeSinceLastClaim = Date.now() - lastClaim.getTime();
+
+    // reset streak if more than 36 hours
+    if (timeSinceLastClaim > THIRTY_SIX_HOURS_MS) return 1;
+
+    // only increment if within valid window (12-36 hours)
+    if (timeSinceLastClaim >= TWELVE_HOURS_MS) return currentStreak + 1;
+
+    return currentStreak;
+}
+
+function calculateReward(streak: number): { total: number; base: number } {
+    const tierIndex = Math.min(streak - 1, REWARD_TIERS.length - 1);
+    const base = REWARD_TIERS[tierIndex];
+
+    return { total: base, base };
+}
+
+export const POST: RequestHandler = async ({ request }) => {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session?.user) throw error(401, 'Not authenticated');
+
+    const userId = Number(session.user.id);
+    const now = new Date();
+
+    return await db.transaction(async (tx) => {
+        const userData = await tx.select({
+            id: user.id,
+            baseCurrencyBalance: user.baseCurrencyBalance,
+            lastRewardClaim: user.lastRewardClaim,
+            totalRewardsClaimed: user.totalRewardsClaimed,
+            loginStreak: user.loginStreak
+        })
+            .from(user)
+            .where(eq(user.id, userId))
+            .limit(1);
+
+        if (!userData[0]) {
+            throw error(404, 'User not found');
+        }
+
+        const currentUser = userData[0];
+
+        if (currentUser.lastRewardClaim) {
+            const timeSinceLastClaim = now.getTime() - currentUser.lastRewardClaim.getTime();
+            if (timeSinceLastClaim < TWELVE_HOURS_MS) {
+                return json({
+                    error: 'Daily reward not yet available',
+                    canClaim: false,
+                    timeRemaining: TWELVE_HOURS_MS - timeSinceLastClaim
+                }, { status: 429 });
+            }
+        }
+
+        const newStreak = calculateStreak(currentUser.lastRewardClaim, currentUser.loginStreak || 0);
+        const reward = calculateReward(newStreak);
+
+        const currentBalance = parseFloat(currentUser.baseCurrencyBalance || '0');
+        const currentTotalRewards = parseFloat(currentUser.totalRewardsClaimed || '0');
+        const newBalance = currentBalance + reward.total;
+        const newTotalRewards = currentTotalRewards + reward.total;
+
+        await tx.update(user)
+            .set({
+                baseCurrencyBalance: newBalance.toFixed(8),
+                lastRewardClaim: now,
+                totalRewardsClaimed: newTotalRewards.toFixed(8),
+                loginStreak: newStreak
+            })
+            .where(eq(user.id, currentUser.id));
+
+        return json({
+            success: true,
+            rewardAmount: reward.total,
+            baseReward: reward.base,
+            newBalance,
+            totalRewardsClaimed: newTotalRewards,
+            loginStreak: newStreak,
+            nextClaimTime: new Date(now.getTime() + TWELVE_HOURS_MS)
+        });
+    });
+};
+
+export const GET: RequestHandler = async ({ request }) => {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session?.user) throw error(401, 'Not authenticated');
+
+    const [currentUser] = await db.select({
+        id: user.id,
+        baseCurrencyBalance: user.baseCurrencyBalance,
+        lastRewardClaim: user.lastRewardClaim,
+        totalRewardsClaimed: user.totalRewardsClaimed,
+        loginStreak: user.loginStreak
+    })
+        .from(user)
+        .where(eq(user.id, Number(session.user.id)))
+        .limit(1);
+
+    if (!currentUser) {
+        throw error(404, 'User not found');
+    }
+
+    const now = new Date();
+
+    let canClaim = true;
+    let timeRemaining = 0;
+    let nextClaimTime = null;
+
+    if (currentUser.lastRewardClaim) {
+        const timeSinceLastClaim = now.getTime() - currentUser.lastRewardClaim.getTime();
+        if (timeSinceLastClaim < TWELVE_HOURS_MS) {
+            canClaim = false;
+            timeRemaining = TWELVE_HOURS_MS - timeSinceLastClaim;
+            nextClaimTime = new Date(currentUser.lastRewardClaim.getTime() + TWELVE_HOURS_MS);
+        }
+    }
+
+    const potentialStreak = calculateStreak(currentUser.lastRewardClaim, currentUser.loginStreak || 0);
+    const reward = calculateReward(potentialStreak);
+
+    return json({
+        canClaim,
+        rewardAmount: reward.total,
+        baseReward: reward.base,
+        timeRemaining,
+        nextClaimTime,
+        totalRewardsClaimed: Number(currentUser.totalRewardsClaimed || 0),
+        lastRewardClaim: currentUser.lastRewardClaim,
+        loginStreak: currentUser.loginStreak || 0
+    });
+};

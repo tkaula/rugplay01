@@ -8,6 +8,7 @@ export interface UserProfile {
 	baseCurrencyBalance: number;
 	isAdmin: boolean;
 	totalPortfolioValue: number;
+	loginStreak: number;
 }
 
 export interface UserStats {

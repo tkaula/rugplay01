@@ -2,6 +2,8 @@
 	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 
+	let clickCount = $state(0);
+
 	const status = page.status;
 	const message = getDefaultMessage(status);
 
@@ -19,6 +21,18 @@
 				return 'Something went wrong. We have no idea what happened, but you can blame us for it on X!';
 		}
 	}
+
+	function handleImageClick() {
+		clickCount++;
+	}
+
+	function handleMouseLeave() {
+		clickCount = 0;
+	}
+
+	let tooltipMessage = $derived(
+		clickCount >= 15 ? 'ok you win' : clickCount >= 3 ? 'stop clicking' : 'ts pmo too icl'
+	);
 </script>
 
 <svelte:head>
@@ -40,9 +54,32 @@
 		</div>
 	</div>
 
-	<img
-		src="/404.gif"
-		alt="404 Error Illustration"
-		class="hidden h-64 w-64 object-contain lg:block"
-	/>
+	<div
+		class="group relative hidden lg:block"
+		role="button"
+		tabindex="0"
+		onclick={handleImageClick}
+		onmouseleave={handleMouseLeave}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				handleImageClick();
+			}
+		}}
+		aria-label="Click to interact with error illustration"
+	>
+		<img
+			src="/404.gif"
+			alt="404 Error Illustration"
+			class="h-64 w-64 cursor-pointer object-contain transition-transform duration-300 hover:rotate-12 hover:scale-110"
+		/>
+		<div
+			class="absolute -top-12 left-1/2 z-10 -translate-x-1/2 transform whitespace-nowrap rounded-lg bg-black px-3 py-1 text-sm text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+		>
+			{tooltipMessage}
+			<div
+				class="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 transform border-l-4 border-r-4 border-t-4 border-transparent border-t-black"
+			></div>
+		</div>
+	</div>
 </div>

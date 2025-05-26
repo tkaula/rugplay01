@@ -7,18 +7,10 @@
 	import TradeModal from '$lib/components/self/TradeModal.svelte';
 	import CommentSection from '$lib/components/self/CommentSection.svelte';
 	import UserProfilePreview from '$lib/components/self/UserProfilePreview.svelte';
-	import {
-		TrendingUp,
-		TrendingDown,
-		DollarSign,
-		Coins,
-		ChartColumn,
-		CalendarDays
-	} from 'lucide-svelte';
+	import { TrendingUp, TrendingDown, DollarSign, Coins, ChartColumn } from 'lucide-svelte';
 	import {
 		createChart,
 		ColorType,
-		type Time,
 		type IChartApi,
 		CandlestickSeries,
 		HistogramSeries
@@ -61,7 +53,6 @@
 			coin = result.coin;
 			chartData = result.candlestickData || [];
 			volumeData = result.volumeData || [];
-
 		} catch (e) {
 			console.error('Failed to fetch coin data:', e);
 			toast.error('Failed to load coin data');

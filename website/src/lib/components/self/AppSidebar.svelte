@@ -25,8 +25,8 @@
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { PORTFOLIO_DATA, fetchPortfolioData } from '$lib/stores/portfolio-data';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
-
 	import SignInConfirmDialog from './SignInConfirmDialog.svelte';
+	import DailyRewards from './DailyRewards.svelte';
 	import { signOut } from '$lib/auth-client';
 	import { getPublicUrl } from '$lib/utils';
 	import { goto } from '$app/navigation';
@@ -142,8 +142,18 @@
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
 				</Sidebar.Menu>
-			</Sidebar.GroupContent>
-		</Sidebar.Group>
+			</Sidebar.GroupContent>		</Sidebar.Group>
+
+		<!-- Daily Rewards -->
+		{#if $USER_DATA}
+			<Sidebar.Group>
+				<Sidebar.GroupContent>
+					<div class="px-2 py-1">
+						<DailyRewards />
+					</div>
+				</Sidebar.GroupContent>
+			</Sidebar.Group>
+		{/if}
 
 		<!-- Portfolio Summary -->
 		{#if $USER_DATA && $PORTFOLIO_DATA}

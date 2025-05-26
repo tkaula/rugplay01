@@ -19,6 +19,13 @@ export const user = pgTable("user", {
 	}).notNull().default("10000.00000000"), // 10,000 *BUSS
 	bio: varchar("bio", { length: 160 }).default("Hello am 48 year old man from somalia. Sorry for my bed england. I selled my wife for internet connection for play “conter stirk”"),
 	username: varchar("username", { length: 30 }).notNull().unique(),
+
+	lastRewardClaim: timestamp("last_reward_claim", { withTimezone: true }),
+	totalRewardsClaimed: decimal("total_rewards_claimed", {
+		precision: 20,
+		scale: 8,
+	}).notNull().default("0.00000000"),
+	loginStreak: integer("login_streak").notNull().default(0)
 });
 
 export const session = pgTable("session", {

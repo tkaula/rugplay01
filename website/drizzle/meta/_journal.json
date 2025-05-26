@@ -36,6 +36,20 @@
       "when": 1748103716114,
       "tag": "0004_cloudy_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1748189217541,
+      "tag": "0005_acoustic_santa_claus",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1748189449547,
+      "tag": "0006_happy_katie_power",
+      "breakpoints": true
     }
   ]
 }

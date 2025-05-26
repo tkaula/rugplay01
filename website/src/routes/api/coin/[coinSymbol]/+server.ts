@@ -132,7 +132,8 @@ export async function GET({ params, url }) {
                 creatorId: coin.creatorId,
                 creatorName: user.name,
                 creatorUsername: user.username,
-                creatorBio: user.bio
+                creatorBio: user.bio,
+                creatorImage: user.image
             })
             .from(coin)
             .leftJoin(user, eq(coin.creatorId, user.id))
