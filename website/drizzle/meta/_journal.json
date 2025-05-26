@@ -50,6 +50,13 @@
       "when": 1748189449547,
       "tag": "0006_happy_katie_power",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1748262487765,
+      "tag": "0007_funny_hemingway",
+      "breakpoints": true
     }
   ]
 }

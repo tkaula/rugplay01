@@ -143,4 +143,34 @@ export function formatTimeAgo(date: string) {
     return `${diffDays}d ago`;
 }
 
+export function formatTimeRemaining(timeMs: number): string {
+    const hours = Math.floor(timeMs / (60 * 60 * 1000));
+    const minutes = Math.floor((timeMs % (60 * 60 * 1000)) / (60 * 1000));
+
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+}
+
+export function getExpirationDate(option: string): string | null {
+    if (!option) return null;
+
+    const now = new Date();
+    switch (option) {
+        case '1h':
+            return new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+        case '1d':
+            return new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        case '3d':
+            return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+        case '7d':
+            return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        case '30d':
+            return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        default:
+            return null;
+    }
+}
+
 export const formatMarketCap = formatValue;

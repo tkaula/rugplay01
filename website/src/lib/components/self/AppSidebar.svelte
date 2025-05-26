@@ -13,16 +13,17 @@
 		BriefcaseBusiness,
 		Coins,
 		ChevronsUpDownIcon,
-		SparklesIcon,
-		BadgeCheckIcon,
-		CreditCardIcon,
-		BellIcon,
 		LogOutIcon,
 		Wallet,
 		Trophy,
 		Activity,
 		TrendingUp,
-		TrendingDown
+		TrendingDown,
+		User,
+		Settings,
+		Gift,
+		Shield,
+		Ticket
 	} from 'lucide-svelte';
 	import { mode, setMode } from 'mode-watcher';
 	import type { HTMLAttributes } from 'svelte/elements';
@@ -31,6 +32,7 @@
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import SignInConfirmDialog from './SignInConfirmDialog.svelte';
 	import DailyRewards from './DailyRewards.svelte';
+	import PromoCodeDialog from './PromoCodeDialog.svelte';
 	import { signOut } from '$lib/auth-client';
 	import { formatValue, getPublicUrl } from '$lib/utils';
 	import { goto } from '$app/navigation';
@@ -43,13 +45,13 @@
 			{ title: 'Portfolio', url: '/portfolio', icon: BriefcaseBusiness },
 			{ title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
 			{ title: 'Create coin', url: '/coin/create', icon: Coins }
-		],
-		navAdmin: [{ title: 'Admin', url: '/admin', icon: ShieldAlert }]
+		]
 	};
 	type MenuButtonProps = HTMLAttributes<HTMLAnchorElement | HTMLButtonElement>;
 
 	const { setOpenMobile, isMobile } = useSidebar();
 	let shouldSignIn = $state(false);
+	let showPromoCode = $state(false);
 
 	$effect(() => {
 		if ($USER_DATA) {
@@ -84,9 +86,32 @@
 		goto(`/coin/${coinSymbol.toLowerCase()}`);
 		setOpenMobile(false);
 	}
+
+	function handleAccountClick() {
+		if ($USER_DATA) {
+			goto(`/user/${$USER_DATA.id}`);
+			setOpenMobile(false);
+		}
+	}
+
+	function handleSettingsClick() {
+		goto('/settings');
+		setOpenMobile(false);
+	}
+
+	function handleAdminClick() {
+		goto('/admin');
+		setOpenMobile(false);
+	}
+
+	function handlePromoCodesClick() {
+		goto('/admin/promo');
+		setOpenMobile(false);
+	}
 </script>
 
 <SignInConfirmDialog bind:open={shouldSignIn} />
+<PromoCodeDialog bind:open={showPromoCode} />
 <Sidebar.Root collapsible="offcanvas">
 	<Sidebar.Header>
 		<div class="flex items-center gap-1 px-2 py-2">
@@ -120,25 +145,6 @@
 							</Sidebar.MenuButton>
 						</Sidebar.MenuItem>
 					{/each}
-
-					{#if $USER_DATA?.isAdmin}
-						{#each data.navAdmin as item}
-							<Sidebar.MenuItem>
-								<Sidebar.MenuButton>
-									{#snippet child({ props }: { props: MenuButtonProps })}
-										<a
-											href={item.url}
-											onclick={() => handleNavClick(item.title)}
-											class={`${props.class}`}
-										>
-											<item.icon />
-											<span>{item.title}</span>
-										</a>
-									{/snippet}
-								</Sidebar.MenuButton>
-							</Sidebar.MenuItem>
-						{/each}
-					{/if}
 
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton>
@@ -348,26 +354,38 @@
 							</DropdownMenu.Label>
 							<DropdownMenu.Separator />
 							<DropdownMenu.Group>
-								<DropdownMenu.Item disabled={true}>
-									<SparklesIcon />
-									Upgrade to Pro
-								</DropdownMenu.Item>
-							</DropdownMenu.Group>
-							<DropdownMenu.Separator />
-							<DropdownMenu.Group>
-								<DropdownMenu.Item onclick={() => goto('/settings')}>
-									<BadgeCheckIcon />
+								<DropdownMenu.Item onclick={handleAccountClick}>
+									<User />
 									Account
 								</DropdownMenu.Item>
-								<DropdownMenu.Item disabled={true}>
-									<CreditCardIcon />
-									Billing
+								<DropdownMenu.Item onclick={handleSettingsClick}>
+									<Settings />
+									Settings
 								</DropdownMenu.Item>
-								<DropdownMenu.Item disabled={true}>
-									<BellIcon />
-									Notifications
+								<DropdownMenu.Item onclick={() => (showPromoCode = true)}>
+									<Gift />
+									Promo code
 								</DropdownMenu.Item>
 							</DropdownMenu.Group>
+							{#if $USER_DATA?.isAdmin}
+								<DropdownMenu.Separator />
+								<DropdownMenu.Group>
+									<DropdownMenu.Item
+										onclick={handleAdminClick}
+										class="text-primary hover:text-primary!"
+									>
+										<Shield class="text-primary" />
+										Admin Panel
+									</DropdownMenu.Item>
+									<DropdownMenu.Item
+										onclick={handlePromoCodesClick}
+										class="text-primary hover:text-primary!"
+									>
+										<Ticket class="text-primary" />
+										Manage codes
+									</DropdownMenu.Item>
+								</DropdownMenu.Group>
+							{/if}
 							<DropdownMenu.Separator />
 							<DropdownMenu.Item
 								onclick={() => {

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Gift, Clock, CheckCircle, Flame } from 'lucide-svelte';
+	import { Gift, Clock, CheckCircle, Flame, Loader2 } from 'lucide-svelte';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { fetchPortfolioData } from '$lib/stores/portfolio-data';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
+	import { formatTimeRemaining } from '$lib/utils';
 
 	interface RewardStatus {
 		canClaim: boolean;
@@ -123,16 +124,6 @@
 		}
 	}
 
-	function formatTimeRemaining(timeMs: number): string {
-		const hours = Math.floor(timeMs / (60 * 60 * 1000));
-		const minutes = Math.floor((timeMs % (60 * 60 * 1000)) / (60 * 1000));
-
-		if (hours > 0) {
-			return `${hours}h ${minutes}m`;
-		}
-		return `${minutes}m`;
-	}
-
 	function formatCurrency(value: number): string {
 		return value.toLocaleString('en-US', {
 			minimumFractionDigits: 0,
@@ -149,7 +140,7 @@
 	variant={claimState === 'success' ? 'secondary' : rewardStatus?.canClaim ? 'default' : 'outline'}
 >
 	{#if !rewardStatus || claimState === 'loading'}
-		<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
+		<Loader2 class="h-4 w-4 animate-spin" />
 		<span>{!rewardStatus ? 'Loading...' : 'Claiming...'}</span>
 	{:else if claimState === 'success'}
 		<CheckCircle class="h-4 w-4" />

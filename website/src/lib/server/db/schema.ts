@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, decimal, serial, varchar, integer, primaryKey, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, decimal, serial, varchar, integer, primaryKey, pgEnum, index, unique } from "drizzle-orm/pg-core";
 
 export const transactionTypeEnum = pgEnum('transaction_type', ['BUY', 'SELL']);
 
@@ -139,3 +139,25 @@ export const commentLike = pgTable("comment_like", {
 		pk: primaryKey({ columns: [table.userId, table.commentId] }),
 	};
 });
+
+export const promoCode = pgTable('promo_code', {
+    id: serial('id').primaryKey(),
+    code: varchar('code', { length: 50 }).notNull().unique(),
+    description: text('description'),
+    rewardAmount: decimal('reward_amount', { precision: 20, scale: 8 }).notNull(),
+    maxUses: integer('max_uses'), // null = unlimited
+    isActive: boolean('is_active').notNull().default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: integer('created_by').references(() => user.id),
+});
+
+export const promoCodeRedemption = pgTable('promo_code_redemption', {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => user.id),
+    promoCodeId: integer('promo_code_id').notNull().references(() => promoCode.id),
+    rewardAmount: decimal('reward_amount', { precision: 20, scale: 8 }).notNull(),
+    redeemedAt: timestamp('redeemed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+    userPromoUnique: unique().on(table.userId, table.promoCodeId),
+}));
