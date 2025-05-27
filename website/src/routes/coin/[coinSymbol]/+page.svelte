@@ -355,7 +355,10 @@
 						<div class="mt-1 flex items-center gap-2">
 							<Badge variant="outline" class="text-lg">*{coin.symbol}</Badge>
 							{#if $isConnectedStore}
-								<Badge variant="outline" class="border-green-500 text-xs text-green-500 animate-pulse">
+								<Badge
+									variant="outline"
+									class="animate-pulse border-green-500 text-xs text-green-500"
+								>
 									● LIVE
 								</Badge>
 							{/if}
@@ -539,8 +542,8 @@
 			<!-- Statistics Grid -->
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 				<!-- Market Cap -->
-				<Card.Root>
-					<Card.Header class="pb-2">
+				<Card.Root class="gap-1">
+					<Card.Header>
 						<Card.Title class="flex items-center gap-2 text-sm font-medium">
 							<DollarSign class="h-4 w-4" />
 							Market Cap
@@ -554,8 +557,8 @@
 				</Card.Root>
 
 				<!-- 24h Volume -->
-				<Card.Root>
-					<Card.Header class="pb-2">
+				<Card.Root class="gap-1">
+					<Card.Header>
 						<Card.Title class="flex items-center gap-2 text-sm font-medium">
 							<ChartColumn class="h-4 w-4" />
 							24h Volume
@@ -569,24 +572,25 @@
 				</Card.Root>
 
 				<!-- Circulating Supply -->
-				<Card.Root>
-					<Card.Header class="pb-2">
+				<Card.Root class="gap-1">
+					<Card.Header>
 						<Card.Title class="flex items-center gap-2 text-sm font-medium">
 							<Coins class="h-4 w-4" />
 							Circulating Supply
 						</Card.Title>
 					</Card.Header>
 					<Card.Content class="pt-0">
-						<p class="text-xl font-bold">{formatSupply(coin.circulatingSupply)}</p>
-						<p class="text-muted-foreground text-xs">
-							of {formatSupply(coin.initialSupply)} total
+						<p class="text-xl font-bold">
+							{formatSupply(coin.circulatingSupply)}<span class="text-muted-foreground text-xs ml-1">
+								of {formatSupply(coin.initialSupply)} total
+							</span>
 						</p>
 					</Card.Content>
 				</Card.Root>
 
 				<!-- 24h Change -->
-				<Card.Root>
-					<Card.Header class="pb-2">
+				<Card.Root class="gap-1">
+					<Card.Header>
 						<Card.Title class="text-sm font-medium">24h Change</Card.Title>
 					</Card.Header>
 					<Card.Content class="pt-0">
