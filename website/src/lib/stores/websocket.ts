@@ -16,6 +16,16 @@ export interface LiveTrade {
     userImage?: string;
 }
 
+export interface PriceUpdate {
+    coinSymbol: string;
+    currentPrice: number;
+    marketCap: number;
+    change24h: number;
+    volume24h: number;
+    poolCoinAmount?: number;
+    poolBaseCurrencyAmount?: number;
+}
+
 // Constants
 const WEBSOCKET_URL = PUBLIC_WEBSOCKET_URL;
 const RECONNECT_DELAY = 5000;
@@ -32,9 +42,13 @@ export const liveTradesStore = writable<LiveTrade[]>([]);
 export const allTradesStore = writable<LiveTrade[]>([]);
 export const isConnectedStore = writable<boolean>(false);
 export const isLoadingTrades = writable<boolean>(false);
+export const priceUpdatesStore = writable<Record<string, PriceUpdate>>({});
 
 // Comment callbacks
 const commentSubscriptions = new Map<string, (message: any) => void>();
+
+// Price update callbacks
+const priceUpdateSubscriptions = new Map<string, (priceUpdate: PriceUpdate) => void>();
 
 async function loadInitialTrades(): Promise<void> {
     if (!browser) return;
@@ -115,6 +129,29 @@ function handleCommentMessage(message: any): void {
     }
 }
 
+function handlePriceUpdateMessage(message: any): void {
+    const priceUpdate: PriceUpdate = {
+        coinSymbol: message.coinSymbol,
+        currentPrice: message.currentPrice,
+        marketCap: message.marketCap,
+        change24h: message.change24h,
+        volume24h: message.volume24h,
+        poolCoinAmount: message.poolCoinAmount,
+        poolBaseCurrencyAmount: message.poolBaseCurrencyAmount
+    };
+
+    priceUpdatesStore.update(updates => ({
+        ...updates,
+        [message.coinSymbol]: priceUpdate
+    }));
+
+    // Call specific coin callback if subscribed
+    const callback = priceUpdateSubscriptions.get(message.coinSymbol);
+    if (callback) {
+        callback(priceUpdate);
+    }
+}
+
 function handleWebSocketMessage(event: MessageEvent): void {
     try {
         const message = JSON.parse(event.data);
@@ -123,6 +160,10 @@ function handleWebSocketMessage(event: MessageEvent): void {
             case 'live-trade':
             case 'all-trades':
                 handleTradeMessage(message);
+                break;
+
+            case 'price_update':
+                handlePriceUpdateMessage(message);
                 break;
 
             case 'ping':
@@ -202,11 +243,21 @@ function unsubscribeFromComments(coinSymbol: string): void {
     commentSubscriptions.delete(coinSymbol);
 }
 
+function subscribeToPriceUpdates(coinSymbol: string, callback: (priceUpdate: PriceUpdate) => void): void {
+    priceUpdateSubscriptions.set(coinSymbol, callback);
+}
+
+function unsubscribeFromPriceUpdates(coinSymbol: string): void {
+    priceUpdateSubscriptions.delete(coinSymbol);
+}
+
 export const websocketController = {
     connect,
     disconnect,
     setCoin,
     subscribeToComments,
     unsubscribeFromComments,
+    subscribeToPriceUpdates,
+    unsubscribeFromPriceUpdates,
     loadInitialTrades
 };

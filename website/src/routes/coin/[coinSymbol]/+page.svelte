@@ -22,12 +22,11 @@
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { fetchPortfolioData } from '$lib/stores/portfolio-data';
-	import { getPublicUrl } from '$lib/utils.js';
-	import { websocketController } from '$lib/stores/websocket';
+	import { getPublicUrl, getTimeframeInSeconds } from '$lib/utils.js';
+	import { websocketController, type PriceUpdate, isConnectedStore } from '$lib/stores/websocket';
 
 	const { data } = $props();
 	const coinSymbol = data.coinSymbol;
-
 	let coin = $state<any>(null);
 	let loading = $state(true);
 	let chartData = $state<any[]>([]);
@@ -36,12 +35,21 @@
 	let buyModalOpen = $state(false);
 	let sellModalOpen = $state(false);
 	let selectedTimeframe = $state('1m');
+	let lastPriceUpdateTime = 0;
 
 	onMount(async () => {
 		await loadCoinData();
 		await loadUserHolding();
 
 		websocketController.setCoin(coinSymbol.toUpperCase());
+
+		websocketController.subscribeToPriceUpdates(coinSymbol.toUpperCase(), handlePriceUpdate);
+	});
+
+	$effect(() => {
+		return () => {
+			websocketController.unsubscribeFromPriceUpdates(coinSymbol.toUpperCase());
+		};
 	});
 
 	async function loadCoinData() {
@@ -79,9 +87,69 @@
 			console.error('Failed to load user holding:', e);
 		}
 	}
-
 	async function handleTradeSuccess() {
 		await Promise.all([loadCoinData(), loadUserHolding(), fetchPortfolioData()]);
+	}
+	function handlePriceUpdate(priceUpdate: PriceUpdate) {
+		if (coin && priceUpdate.coinSymbol === coinSymbol.toUpperCase()) {
+			// throttle updates to prevent excessive UI updates, 1s interval
+			const now = Date.now();
+			if (now - lastPriceUpdateTime < 1000) {
+				return;
+			}
+			lastPriceUpdateTime = now;
+
+			coin = {
+				...coin,
+				currentPrice: priceUpdate.currentPrice,
+				marketCap: priceUpdate.marketCap,
+				change24h: priceUpdate.change24h,
+				volume24h: priceUpdate.volume24h,
+				...(priceUpdate.poolCoinAmount !== undefined && {
+					poolCoinAmount: priceUpdate.poolCoinAmount
+				}),
+				...(priceUpdate.poolBaseCurrencyAmount !== undefined && {
+					poolBaseCurrencyAmount: priceUpdate.poolBaseCurrencyAmount
+				})
+			};
+
+			updateChartRealtime(priceUpdate.currentPrice);
+		}
+	}
+
+	function updateChartRealtime(newPrice: number) {
+		if (!candlestickSeries || !chart || chartData.length === 0) return;
+
+		const timeframeSeconds = getTimeframeInSeconds(selectedTimeframe);
+		const currentTime = Math.floor(Date.now() / 1000);
+
+		const currentCandleTime = Math.floor(currentTime / timeframeSeconds) * timeframeSeconds;
+
+		const lastCandle = chartData[chartData.length - 1];
+
+		if (lastCandle && lastCandle.time === currentCandleTime) {
+			const updatedCandle = {
+				time: currentCandleTime,
+				open: lastCandle.open,
+				high: Math.max(lastCandle.high, newPrice),
+				low: Math.min(lastCandle.low, newPrice),
+				close: newPrice
+			};
+
+			candlestickSeries.update(updatedCandle);
+			chartData[chartData.length - 1] = updatedCandle;
+		} else if (currentCandleTime > (lastCandle?.time || 0)) {
+			const newCandle = {
+				time: currentCandleTime,
+				open: newPrice,
+				high: newPrice,
+				low: newPrice,
+				close: newPrice
+			};
+
+			candlestickSeries.update(newCandle);
+			chartData.push(newCandle);
+		}
 	}
 
 	async function handleTimeframeChange(timeframe: string) {
@@ -110,9 +178,10 @@
 			};
 		});
 	}
-
 	let chartContainer = $state<HTMLDivElement>();
 	let chart: IChartApi | null = null;
+	let candlestickSeries: any = null;
+	let volumeSeries: any = null;
 
 	$effect(() => {
 		if (chart && chartData.length > 0) {
@@ -155,8 +224,7 @@
 					horzLine: { color: '#758696', width: 1, style: 2, visible: true, labelVisible: true }
 				}
 			});
-
-			const candlestickSeries = chart.addSeries(CandlestickSeries, {
+			candlestickSeries = chart.addSeries(CandlestickSeries, {
 				upColor: '#26a69a',
 				downColor: '#ef5350',
 				borderVisible: true,
@@ -167,7 +235,7 @@
 				priceFormat: { type: 'price', precision: 8, minMove: 0.00000001 }
 			});
 
-			const volumeSeries = chart.addSeries(
+			volumeSeries = chart.addSeries(
 				HistogramSeries,
 				{
 					priceFormat: { type: 'volume' },
@@ -286,6 +354,11 @@
 						<h1 class="text-4xl font-bold">{coin.name}</h1>
 						<div class="mt-1 flex items-center gap-2">
 							<Badge variant="outline" class="text-lg">*{coin.symbol}</Badge>
+							{#if $isConnectedStore}
+								<Badge variant="outline" class="border-green-500 text-xs text-green-500 animate-pulse">
+									● LIVE
+								</Badge>
+							{/if}
 							{#if !coin.isListed}
 								<Badge variant="destructive">Delisted</Badge>
 							{/if}
@@ -293,9 +366,11 @@
 					</div>
 				</div>
 				<div class="text-right">
-					<p class="text-3xl font-bold">
-						${formatPrice(coin.currentPrice)}
-					</p>
+					<div class="relative">
+						<p class="text-3xl font-bold">
+							${formatPrice(coin.currentPrice)}
+						</p>
+					</div>
 					<div class="mt-2 flex items-center gap-2">
 						{#if coin.change24h >= 0}
 							<TrendingUp class="h-4 w-4 text-green-500" />
@@ -416,11 +491,10 @@
 							{/if}
 						</Card.Content>
 					</Card.Root>
-
 					<!-- Liquidity Pool -->
 					<Card.Root>
 						<Card.Header class="pb-4">
-							<Card.Title>Liquidity Pool</Card.Title>
+							<Card.Title class="flex items-center gap-2">Liquidity Pool</Card.Title>
 						</Card.Header>
 						<Card.Content class="pt-0">
 							<div class="space-y-4">
@@ -429,7 +503,9 @@
 									<div class="space-y-2">
 										<div class="flex justify-between">
 											<span class="text-muted-foreground text-sm">{coin.symbol}:</span>
-											<span class="font-mono text-sm">{formatSupply(coin.poolCoinAmount)}</span>
+											<span class="font-mono text-sm">
+												{formatSupply(coin.poolCoinAmount)}
+											</span>
 										</div>
 										<div class="flex justify-between">
 											<span class="text-muted-foreground text-sm">Base Currency:</span>
@@ -471,7 +547,9 @@
 						</Card.Title>
 					</Card.Header>
 					<Card.Content class="pt-0">
-						<p class="text-xl font-bold">{formatMarketCap(coin.marketCap)}</p>
+						<p class="text-xl font-bold">
+							{formatMarketCap(coin.marketCap)}
+						</p>
 					</Card.Content>
 				</Card.Root>
 
@@ -484,7 +562,9 @@
 						</Card.Title>
 					</Card.Header>
 					<Card.Content class="pt-0">
-						<p class="text-xl font-bold">{formatMarketCap(coin.volume24h)}</p>
+						<p class="text-xl font-bold">
+							{formatMarketCap(coin.volume24h)}
+						</p>
 					</Card.Content>
 				</Card.Root>
 

@@ -183,4 +183,23 @@ export function getExpirationDate(option: string): string | null {
     }
 }
 
+export function getTimeframeInSeconds(timeframe: string): number {
+    switch (timeframe) {
+        case '1m':
+            return 60;
+        case '5m':
+            return 300;
+        case '15m':
+            return 900;
+        case '1h':
+            return 3600;
+        case '4h':
+            return 14400;
+        case '1d':
+            return 86400;
+        default:
+            return 60;
+    }
+}
+
 export const formatMarketCap = formatValue;

@@ -5,7 +5,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import { TrendingUp, TrendingDown, Loader2 } from 'lucide-svelte';
-	import { USER_DATA } from '$lib/stores/user-data';
+	import { PORTFOLIO_DATA } from '$lib/stores/portfolio-data';
 	import { toast } from 'svelte-sonner';
 
 	let {
@@ -33,10 +33,9 @@
 			? Math.min(userHolding, Math.floor(Number(coin.poolCoinAmount) * 0.995))
 			: userHolding
 	);
-
 	let estimatedResult = $derived(calculateEstimate(numericAmount, type, currentPrice));
 	let hasValidAmount = $derived(numericAmount > 0);
-	let userBalance = $derived($USER_DATA ? Number($USER_DATA.baseCurrencyBalance) : 0);
+	let userBalance = $derived($PORTFOLIO_DATA ? $PORTFOLIO_DATA.baseCurrencyBalance : 0);
 	let hasEnoughFunds = $derived(
 		type === 'BUY' ? numericAmount <= userBalance : numericAmount <= userHolding
 	);
@@ -114,7 +113,7 @@
 	function setMaxAmount() {
 		if (type === 'SELL') {
 			amount = maxSellableAmount.toString();
-		} else if ($USER_DATA) {
+		} else if ($PORTFOLIO_DATA) {
 			// For BUY, max is user's balance
 			amount = userBalance.toString();
 		}
@@ -164,7 +163,7 @@
 							<br />Max sellable: {maxSellableAmount.toFixed(0)} {coin.symbol} (pool limit)
 						{/if}
 					</p>
-				{:else if $USER_DATA}
+				{:else if $PORTFOLIO_DATA}
 					<p class="text-muted-foreground text-xs">
 						Balance: ${userBalance.toFixed(6)}
 					</p>

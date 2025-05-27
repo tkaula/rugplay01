@@ -185,7 +185,9 @@ export async function POST({ params, request }) {
                 currentPrice: newPrice,
                 marketCap: Number(coinData.circulatingSupply) * newPrice,
                 change24h: metrics.change24h,
-                volume24h: metrics.volume24h
+                volume24h: metrics.volume24h,
+                poolCoinAmount: newPoolCoin,
+                poolBaseCurrencyAmount: newPoolBaseCurrency
             }));
         });
 
@@ -325,7 +327,9 @@ export async function POST({ params, request }) {
                 currentPrice: newPrice,
                 marketCap: Number(coinData.circulatingSupply) * newPrice,
                 change24h: metrics.change24h,
-                volume24h: metrics.volume24h
+                volume24h: metrics.volume24h,
+                poolCoinAmount: newPoolCoin,
+                poolBaseCurrencyAmount: newPoolBaseCurrency
             }));
         });
 
