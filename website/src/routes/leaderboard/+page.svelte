@@ -201,14 +201,14 @@
 	<title>Leaderboard - Rugplay</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
-	<header class="mb-8">
-		<div class="flex items-center justify-between">
+<div class="container mx-auto max-w-7xl p-4 md:p-6">
+	<header class="mb-6 md:mb-8">
+		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 			<div>
-				<h1 class="text-3xl font-bold">Leaderboard</h1>
-				<p class="text-muted-foreground">Top performers and market activity</p>
+				<h1 class="text-2xl font-bold md:text-3xl">Leaderboard</h1>
+				<p class="text-muted-foreground text-sm md:text-base">Top performers and market activity</p>
 			</div>
-			<Button variant="outline" onclick={fetchLeaderboardData} disabled={loading}>
+			<Button variant="outline" onclick={fetchLeaderboardData} disabled={loading} class="w-fit">
 				<RefreshCw class="h-4 w-4" />
 				Refresh
 			</Button>
@@ -220,24 +220,24 @@
 	{:else if !leaderboardData}
 		<div class="flex h-96 items-center justify-center">
 			<div class="text-center">
-				<div class="text-muted-foreground mb-4 text-xl">Failed to load leaderboard</div>
+				<div class="text-muted-foreground mb-4 text-lg md:text-xl">Failed to load leaderboard</div>
 				<Button onclick={fetchLeaderboardData}>Try Again</Button>
 			</div>
 		</div>
 	{:else}
-		<div class="grid gap-6 lg:grid-cols-2">
+		<div class="grid gap-4 md:gap-6 xl:grid-cols-2">
 			<!-- Top Profit Makers -->
-			<Card.Root>
-				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-red-600">
-						<Skull class="h-6 w-6" />
-						Top Rugpullers (24h)
+			<Card.Root class="overflow-hidden">
+				<Card.Header class="pb-3 md:pb-4">
+					<Card.Title class="flex items-center gap-2 text-lg text-red-600 md:text-xl">
+						<Skull class="h-5 w-5 md:h-6 md:w-6" />
+						<span class="truncate">Top Rugpullers (24h)</span>
 					</Card.Title>
-					<Card.Description>
+					<Card.Description class="text-xs md:text-sm">
 						Users who made the most profit from selling coins today
 					</Card.Description>
 				</Card.Header>
-				<Card.Content>
+				<Card.Content class="p-3 pt-0 md:p-6 md:pt-0">
 					<DataTable
 						columns={rugpullersColumns}
 						data={leaderboardData.topRugpullers}
@@ -249,15 +249,17 @@
 			</Card.Root>
 
 			<!-- Biggest Losses -->
-			<Card.Root>
-				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-orange-600">
-						<TrendingDown class="h-6 w-6" />
-						Biggest Losses (24h)
+			<Card.Root class="overflow-hidden">
+				<Card.Header class="pb-3 md:pb-4">
+					<Card.Title class="flex items-center gap-2 text-lg text-orange-600 md:text-xl">
+						<TrendingDown class="h-5 w-5 md:h-6 md:w-6" />
+						<span class="truncate">Biggest Losses (24h)</span>
 					</Card.Title>
-					<Card.Description>Users who experienced the largest losses today</Card.Description>
+					<Card.Description class="text-xs md:text-sm"
+						>Users who experienced the largest losses today</Card.Description
+					>
 				</Card.Header>
-				<Card.Content>
+				<Card.Content class="p-3 pt-0 md:p-6 md:pt-0">
 					<DataTable
 						columns={losersColumns}
 						data={leaderboardData.biggestLosers}
@@ -269,15 +271,17 @@
 			</Card.Root>
 
 			<!-- Top Cash Holders -->
-			<Card.Root>
-				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-green-600">
-						<Crown class="h-6 w-6" />
-						Top Cash Holders
+			<Card.Root class="overflow-hidden">
+				<Card.Header class="pb-3 md:pb-4">
+					<Card.Title class="flex items-center gap-2 text-lg text-green-600 md:text-xl">
+						<Crown class="h-5 w-5 md:h-6 md:w-6" />
+						<span class="truncate">Top Cash Holders</span>
 					</Card.Title>
-					<Card.Description>Users with the highest liquid cash balances</Card.Description>
+					<Card.Description class="text-xs md:text-sm"
+						>Users with the highest liquid cash balances</Card.Description
+					>
 				</Card.Header>
-				<Card.Content>
+				<Card.Content class="p-3 pt-0 md:p-6 md:pt-0">
 					<DataTable
 						columns={cashKingsColumns}
 						data={leaderboardData.cashKings}
@@ -289,17 +293,17 @@
 			</Card.Root>
 
 			<!-- Top Portfolio Values -->
-			<Card.Root>
-				<Card.Header>
-					<Card.Title class="flex items-center gap-2 text-cyan-600">
-						<Trophy class="h-6 w-6" />
-						Highest Portfolio Values
+			<Card.Root class="overflow-hidden">
+				<Card.Header class="pb-3 md:pb-4">
+					<Card.Title class="flex items-center gap-2 text-lg text-cyan-600 md:text-xl">
+						<Trophy class="h-5 w-5 md:h-6 md:w-6" />
+						<span class="truncate">Highest Portfolio Values</span>
 					</Card.Title>
-					<Card.Description
+					<Card.Description class="text-xs md:text-sm"
 						>Users with the largest total portfolio valuations (including illiquid)</Card.Description
 					>
 				</Card.Header>
-				<Card.Content>
+				<Card.Content class="p-3 pt-0 md:p-6 md:pt-0">
 					<DataTable
 						columns={millionairesColumns}
 						data={leaderboardData.paperMillionaires}

@@ -3,13 +3,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 </script>
 
-<div class="container mx-auto p-6">
-	<!-- Header Skeleton -->
-	<header class="mb-8">
-		<Skeleton class="mb-2 h-9 w-64" />
-		<Skeleton class="h-5 w-96" />
-	</header>
-
+<div class="container mx-auto">
 	<!-- Top Coins Grid Skeleton -->
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 		{#each Array(6) as _}
@@ -18,7 +12,7 @@
 					<Card.Title class="flex items-center justify-between">
 						<div class="flex items-center gap-2">
 							<Skeleton class="h-6 w-6 rounded-full" />
-							<Skeleton class="h-6 w-32" />
+							<Skeleton class="h-6 max-w-2xl" />
 						</div>
 						<Skeleton class="h-6 w-16" />
 					</Card.Title>

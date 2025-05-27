@@ -226,7 +226,7 @@
 								<div class="flex items-center gap-2">
 									<HoverCard.Root>
 										<HoverCard.Trigger
-											class="cursor-pointer font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-8"
+											class="cursor-pointer font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-8 truncate max-w-[120px] sm:max-w-none text-sm sm:text-base"
 											onclick={() => goto(`/user/${comment.userUsername}`)}
 										>
 											{comment.userName}
@@ -237,13 +237,13 @@
 									</HoverCard.Root>
 									<button
 										onclick={() => goto(`/user/${comment.userUsername}`)}
-										class="cursor-pointer"
+										class="cursor-pointer flex-shrink-0 max-w-[80px] sm:max-w-none"
 									>
-										<Badge variant="outline" class="text-xs">
-											@{comment.userUsername}
+										<Badge variant="outline" class="text-xs w-full justify-start">
+											<span class="truncate">@{comment.userUsername}</span>
 										</Badge>
 									</button>
-									<span class="text-muted-foreground text-xs">
+									<span class="text-muted-foreground whitespace-nowrap text-xs flex-shrink-0">
 										{formatTimeAgo(comment.createdAt)}
 									</span>
 								</div>

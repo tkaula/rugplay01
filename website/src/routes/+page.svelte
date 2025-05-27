@@ -66,13 +66,11 @@
 		{
 			key: 'marketCap',
 			label: 'Market Cap',
-			class: 'hidden md:table-cell',
 			render: (value: any) => formatMarketCap(value)
 		},
 		{
 			key: 'volume24h',
 			label: 'Volume (24h)',
-			class: 'hidden md:table-cell',
 			render: (value: any) => formatMarketCap(value)
 		}
 	];
@@ -144,7 +142,7 @@
 		<div class="mt-12">
 			<h2 class="mb-4 text-2xl font-bold">Market Overview</h2>
 			<Card.Root>
-				<Card.Content class="p-0">
+				<Card.Content>
 					<DataTable
 						columns={marketColumns}
 						data={coins}

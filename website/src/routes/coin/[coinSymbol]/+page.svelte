@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
+	import * as Select from '$lib/components/ui/select';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
@@ -36,6 +37,15 @@
 	let sellModalOpen = $state(false);
 	let selectedTimeframe = $state('1m');
 	let lastPriceUpdateTime = 0;
+
+	const timeframeOptions = [
+		{ value: '1m', label: '1 minute' },
+		{ value: '5m', label: '5 minutes' },
+		{ value: '15m', label: '15 minutes' },
+		{ value: '1h', label: '1 hour' },
+		{ value: '4h', label: '4 hours' },
+		{ value: '1d', label: '1 day' }
+	];
 
 	onMount(async () => {
 		await loadCoinData();
@@ -165,19 +175,10 @@
 		loading = false;
 	}
 
-	function generateVolumeData(candlestickData: any[], volumeData: any[]) {
-		return candlestickData.map((candle, index) => {
-			// Find corresponding volume data for this time period
-			const volumePoint = volumeData.find((v) => v.time === candle.time);
-			const volume = volumePoint ? volumePoint.volume : 0;
+	let currentTimeframeLabel = $derived(
+		timeframeOptions.find((option) => option.value === selectedTimeframe)?.label || '1 minute'
+	);
 
-			return {
-				time: candle.time,
-				value: volume,
-				color: candle.close >= candle.open ? '#26a69a' : '#ef5350'
-			};
-		});
-	}
 	let chartContainer = $state<HTMLDivElement>();
 	let chart: IChartApi | null = null;
 	let candlestickSeries: any = null;
@@ -312,6 +313,20 @@
 		if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
 		return num.toLocaleString();
 	}
+
+	function generateVolumeData(candlestickData: any[], volumeData: any[]) {
+		return candlestickData.map((candle, index) => {
+			// Find corresponding volume data for this time period
+			const volumePoint = volumeData.find((v) => v.time === candle.time);
+			const volume = volumePoint ? volumePoint.volume : 0;
+
+			return {
+				time: candle.time,
+				value: volume,
+				color: candle.close >= candle.open ? '#26a69a' : '#ef5350'
+			};
+		});
+	}
 </script>
 
 <svelte:head>
@@ -341,19 +356,19 @@
 	{:else}
 		<!-- Header Section -->
 		<header class="mb-8">
-			<div class="mb-4 flex items-start justify-between">
-				<div class="flex items-center gap-4">
+			<div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+				<div class="flex items-center gap-3 sm:gap-4">
 					<CoinIcon
 						icon={coin.icon}
 						symbol={coin.symbol}
 						name={coin.name}
-						size={16}
-						class="border"
+						size={12}
+						class="border sm:size-16"
 					/>
-					<div>
-						<h1 class="text-4xl font-bold">{coin.name}</h1>
-						<div class="mt-1 flex items-center gap-2">
-							<Badge variant="outline" class="text-lg">*{coin.symbol}</Badge>
+					<div class="min-w-0 flex-1">
+						<h1 class="text-2xl font-bold sm:text-4xl">{coin.name}</h1>
+						<div class="mt-1 flex flex-wrap items-center gap-2">
+							<Badge variant="outline" class="text-sm sm:text-lg">*{coin.symbol}</Badge>
 							{#if $isConnectedStore}
 								<Badge
 									variant="outline"
@@ -368,19 +383,19 @@
 						</div>
 					</div>
 				</div>
-				<div class="text-right">
+				<div class="flex flex-col items-start gap-2 sm:items-end sm:text-right">
 					<div class="relative">
-						<p class="text-3xl font-bold">
+						<p class="text-2xl font-bold sm:text-3xl">
 							${formatPrice(coin.currentPrice)}
 						</p>
 					</div>
-					<div class="mt-2 flex items-center gap-2">
+					<div class="flex items-center gap-2">
 						{#if coin.change24h >= 0}
 							<TrendingUp class="h-4 w-4 text-green-500" />
 						{:else}
 							<TrendingDown class="h-4 w-4 text-red-500" />
 						{/if}
-						<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'}>
+						<Badge variant={coin.change24h >= 0 ? 'success' : 'destructive'} class="text-sm">
 							{coin.change24h >= 0 ? '+' : ''}{Number(coin.change24h).toFixed(2)}%
 						</Badge>
 					</div>
@@ -389,7 +404,7 @@
 
 			<!-- Creator Info -->
 			{#if coin.creatorName}
-				<div class="text-muted-foreground flex items-center gap-2 text-sm">
+				<div class="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
 					<span>Created by</span>
 
 					<HoverCard.Root>
@@ -423,17 +438,26 @@
 									<ChartColumn class="h-5 w-5" />
 									Price Chart ({selectedTimeframe})
 								</Card.Title>
-								<div class="flex gap-1">
-									{#each ['1m', '5m', '15m', '1h', '4h', '1d'] as timeframe}
-										<Button
-											variant={selectedTimeframe === timeframe ? 'default' : 'outline'}
-											size="sm"
-											onclick={() => handleTimeframeChange(timeframe)}
-											disabled={loading}
-										>
-											{timeframe}
-										</Button>
-									{/each}
+								<div class="w-24">
+									<Select.Root
+										type="single"
+										bind:value={selectedTimeframe}
+										onValueChange={handleTimeframeChange}
+										disabled={loading}
+									>
+										<Select.Trigger class="w-full">
+											{currentTimeframeLabel}
+										</Select.Trigger>
+										<Select.Content>
+											<Select.Group>
+												{#each timeframeOptions as option}
+													<Select.Item value={option.value} label={option.label}>
+														{option.label}
+													</Select.Item>
+												{/each}
+											</Select.Group>
+										</Select.Content>
+									</Select.Root>
 								</div>
 							</div>
 						</Card.Header>
@@ -581,7 +605,9 @@
 					</Card.Header>
 					<Card.Content class="pt-0">
 						<p class="text-xl font-bold">
-							{formatSupply(coin.circulatingSupply)}<span class="text-muted-foreground text-xs ml-1">
+							{formatSupply(coin.circulatingSupply)}<span
+								class="text-muted-foreground ml-1 text-xs"
+							>
 								of {formatSupply(coin.initialSupply)} total
 							</span>
 						</p>

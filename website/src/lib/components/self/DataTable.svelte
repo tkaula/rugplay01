@@ -51,7 +51,7 @@
 		<Table.Header>
 			<Table.Row>
 				{#each columns as column}
-					<Table.Head class={column.class}>{column.label}</Table.Head>
+					<Table.Head class={column.class || 'min-w-[80px]'}>{column.label}</Table.Head>
 				{/each}
 			</Table.Row>
 		</Table.Header>
@@ -114,20 +114,20 @@
 											<span class="font-mono text-sm">#{rendered.number}</span>
 										</div>
 									{:else if rendered.component === 'coin'}
-										<div class="flex items-center gap-3">
+										<div class="flex min-w-0 items-center gap-2">
 											<CoinIcon
 												icon={rendered.icon}
 												symbol={rendered.symbol}
 												name={rendered.name}
-												size={rendered.size || 8}
+												size={rendered.size || 6}
 											/>
-											<div>
-												<div class="font-medium">{rendered.name}</div>
+											<div class="truncate">
+												<div class="truncate font-medium">{rendered.name}</div>
 												<div class="text-muted-foreground text-sm">*{rendered.symbol}</div>
 											</div>
 										</div>
 									{:else if rendered.component === 'link'}
-										<a href={rendered.href} class="flex items-center gap-2 hover:underline">
+										<a href={rendered.href} class="flex items-center gap-1 hover:underline">
 											<CoinIcon
 												icon={rendered.content.icon}
 												symbol={rendered.content.symbol}

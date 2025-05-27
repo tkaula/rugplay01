@@ -364,7 +364,7 @@
 									<Settings />
 									Settings
 								</DropdownMenu.Item>
-								<DropdownMenu.Item onclick={() => (showPromoCode = true)}>
+								<DropdownMenu.Item onclick={() => { showPromoCode = true; setOpenMobile(false); }}>
 									<Gift />
 									Promo code
 								</DropdownMenu.Item>

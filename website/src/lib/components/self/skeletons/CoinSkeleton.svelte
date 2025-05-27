@@ -4,28 +4,29 @@
 </script>
 
 <header class="mb-8">
-	<div class="mb-6 flex items-start justify-between">
-		<div class="flex items-center gap-4">
-			<Skeleton class="h-16 w-16 rounded-lg" />
-			<div>
-				<Skeleton class="mb-2 h-10 w-48" />
-				<div class="mt-1 flex items-center gap-2">
-					<Skeleton class="h-6 w-16" />
-					<Skeleton class="h-6 w-20" />
+	<div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+		<div class="flex items-center gap-3 sm:gap-4">
+			<Skeleton class="h-12 w-12 rounded-lg sm:h-16 sm:w-16" />
+			<div class="min-w-0 flex-1">
+				<Skeleton class="mb-2 h-6 w-40 sm:h-10 sm:w-48" />
+				<div class="mt-1 flex flex-wrap items-center gap-2">
+					<Skeleton class="h-5 w-12 sm:h-6 sm:w-16" />
+					<Skeleton class="h-5 w-16 sm:h-6 sm:w-20" />
+					<Skeleton class="h-5 w-14" />
 				</div>
 			</div>
 		</div>
-		<div class="text-right">
-			<Skeleton class="mb-2 h-8 w-32" />
-			<div class="mt-2 flex items-center gap-2">
+		<div class="flex flex-col items-start gap-2 sm:items-end sm:text-right">
+			<Skeleton class="h-6 w-28 sm:h-8 sm:w-32" />
+			<div class="flex items-center gap-2">
 				<Skeleton class="h-4 w-4" />
-				<Skeleton class="h-6 w-16" />
+				<Skeleton class="h-5 w-12 sm:h-6 sm:w-16" />
 			</div>
 		</div>
 	</div>
 
 	<!-- Creator Info Skeleton -->
-	<div class="text-muted-foreground flex items-center gap-2 text-sm">
+	<div class="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
 		<Skeleton class="h-4 w-20" />
 		<Skeleton class="h-4 w-4 rounded-full" />
 		<Skeleton class="h-4 w-40" />
@@ -44,10 +45,8 @@
 							<Skeleton class="h-5 w-5" />
 							<Skeleton class="h-6 w-32" />
 						</Card.Title>
-						<div class="flex gap-1">
-							{#each Array(6) as _}
-								<Skeleton class="h-8 w-12" />
-							{/each}
+						<div class="w-24">
+							<Skeleton class="h-10 w-full" />
 						</div>
 					</div>
 				</Card.Header>

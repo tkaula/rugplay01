@@ -3,13 +3,13 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as HoverCard from '$lib/components/ui/hover-card';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Activity, TrendingUp, TrendingDown, Clock } from 'lucide-svelte';
 	import { allTradesStore, isLoadingTrades } from '$lib/stores/websocket';
 	import { goto } from '$app/navigation';
 	import { formatQuantity, formatRelativeTime, formatValue, getPublicUrl } from '$lib/utils';
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
 	import UserProfilePreview from '$lib/components/self/UserProfilePreview.svelte';
+	import LiveTradeSkeleton from '$lib/components/self/skeletons/LiveTradeSkeleton.svelte';
 
 	function handleUserClick(username: string) {
 		goto(`/user/${username}`);
@@ -28,101 +28,63 @@
 <div class="container mx-auto max-w-7xl p-6">
 	<header class="mb-8">
 		<div>
-			<h1 class="text-3xl font-bold">Live Trades</h1>
-			<p class="text-muted-foreground">Real-time trading activity for all trades</p>
+			<h1 class="text-2xl font-bold sm:text-3xl">Live Trades</h1>
+			<p class="text-muted-foreground text-sm sm:text-base">
+				Real-time trading activity for all trades
+			</p>
 		</div>
 	</header>
 
 	<Card>
 		<CardHeader>
-			<CardTitle class="flex items-center gap-2">
-				<Activity class="h-5 w-5" />
-				Stream
+			<CardTitle class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+				<div class="flex items-center gap-2">
+					<Activity class="h-5 w-5" />
+					Stream
+				</div>
 				{#if $allTradesStore.length > 0}
-					<Badge variant="secondary" class="ml-auto">
+					<Badge variant="secondary" class="w-fit sm:ml-auto">
 						{$allTradesStore.length} trade{$allTradesStore.length !== 1 ? 's' : ''}
 					</Badge>
 				{/if}
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#if $isLoadingTrades}
-				<div class="space-y-3">
-					{#each Array(8) as _, i}
-						<div class="flex items-center justify-between rounded-lg border p-4">
-							<div class="flex items-center gap-4">
-								<div class="flex items-center gap-2">
-									<Skeleton class="h-8 w-8 rounded-full" />
-									<Skeleton class="h-6 w-12" />
-								</div>
-
-								<div class="flex flex-col gap-2">
-									<div class="flex items-center gap-2">
-										<Skeleton class="h-6 w-6 rounded-full" />
-										<Skeleton class="h-4 w-24" />
-										<Skeleton class="h-4 w-16" />
-										<Skeleton class="h-5 w-5 rounded-full" />
-										<Skeleton class="h-4 w-20" />
-									</div>
-									<Skeleton class="h-3 w-32" />
-								</div>
-							</div>
-
-							<div class="flex items-center gap-2">
-								<Skeleton class="h-4 w-4" />
-								<Skeleton class="h-4 w-16" />
-							</div>
-						</div>
-					{/each}
-				</div>
-			{:else if $allTradesStore.length === 0}
-				<div class="flex flex-col items-center justify-center py-16 text-center">
-					<Activity class="text-muted-foreground/50 mb-4 h-16 w-16" />
-					<h3 class="mb-2 text-lg font-semibold">Waiting for trades...</h3>
-					<p class="text-muted-foreground">All trades will appear here in real-time.</p>
-				</div>
-			{:else}
-				<div class="space-y-3">
+			<div class="space-y-3">
+				{#if $isLoadingTrades}
+					<LiveTradeSkeleton />
+				{:else if $allTradesStore.length === 0}
+					<div class="flex flex-col items-center justify-center py-12 text-center sm:py-16">
+						<Activity class="text-muted-foreground/50 mb-4 h-12 w-12 sm:h-16 sm:w-16" />
+						<h3 class="mb-2 text-base font-semibold sm:text-lg">Waiting for trades...</h3>
+						<p class="text-muted-foreground text-sm sm:text-base">
+							All trades will appear here in real-time.
+						</p>
+					</div>
+				{:else}
 					{#each $allTradesStore as trade (trade.timestamp)}
 						<div
-							class="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
+							class="hover:bg-muted/50 flex flex-col gap-3 rounded-lg border p-3 transition-colors sm:flex-row sm:items-center sm:justify-between sm:p-4"
 						>
-							<div class="flex items-center gap-4">
-								<div class="flex items-center gap-2">
-									{#if trade.type === 'BUY'}
-										<div
-											class="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10"
-										>
-											<TrendingUp class="h-4 w-4 text-green-500" />
-										</div>
-										<Badge variant="outline" class="border-green-500 text-green-500">BUY</Badge>
-									{:else}
-										<div
-											class="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/10"
-										>
-											<TrendingDown class="h-4 w-4 text-red-500" />
-										</div>
-										<Badge variant="outline" class="border-red-500 text-red-500">SELL</Badge>
-									{/if}
-								</div>
-
-								<div class="flex flex-col">
-									<div class="flex items-center gap-2">
+							<div class="flex items-center gap-3 sm:gap-4">
+								<div class="min-w-0 flex-1">
+									<div class="flex flex-wrap items-center gap-1 sm:gap-2">
 										<button
 											onclick={() => handleCoinClick(trade.coinSymbol)}
-											class="flex cursor-pointer items-center gap-2 transition-opacity hover:underline hover:opacity-80"
+											class="flex cursor-pointer items-center gap-1.5 transition-opacity hover:underline hover:opacity-80"
 										>
 											<CoinIcon
 												icon={trade.coinIcon}
 												symbol={trade.coinSymbol}
 												name={trade.coinName || trade.coinSymbol}
-												size={6}
+												size={5}
+												class="sm:size-6"
 											/>
-											<span class="font-mono font-medium">
+											<span class="font-mono text-sm font-medium sm:text-base">
 												{formatQuantity(trade.amount)} *{trade.coinSymbol}
 											</span>
 										</button>
-										<span class="text-muted-foreground">
+										<span class="text-muted-foreground text-xs sm:text-sm">
 											{trade.type === 'BUY' ? 'bought by' : 'sold by'}
 										</span>
 										<HoverCard.Root>
@@ -131,7 +93,7 @@
 												onclick={() => handleUserClick(trade.username)}
 											>
 												<div class="flex items-center gap-1">
-													<Avatar.Root class="h-5 w-5">
+													<Avatar.Root class="h-4 w-4 sm:h-5 sm:w-5">
 														<Avatar.Image
 															src={getPublicUrl(trade.userImage ?? null)}
 															alt={trade.username}
@@ -140,7 +102,9 @@
 															>{trade.username.charAt(0).toUpperCase()}</Avatar.Fallback
 														>
 													</Avatar.Root>
-													<span>@{trade.username}</span>
+													<span class="max-w-[120px] truncate text-xs sm:max-w-none sm:text-sm"
+														>@{trade.username}</span
+													>
 												</div>
 											</HoverCard.Trigger>
 											<HoverCard.Content class="w-80" side="top" sideOffset={3}>
@@ -148,20 +112,35 @@
 											</HoverCard.Content>
 										</HoverCard.Root>
 									</div>
-									<div class="text-muted-foreground text-sm">
-										Trade value: {formatValue(trade.totalValue)}
-									</div>
 								</div>
 							</div>
 
-							<div class="text-muted-foreground flex items-center gap-2 text-sm">
-								<Clock class="h-4 w-4" />
-								<span class="font-mono">{formatRelativeTime(new Date(trade.timestamp))}</span>
+							<div class="flex items-center justify-between gap-2">
+								<div class="flex items-center gap-2 font-mono text-xs sm:text-sm">
+									{#if trade.type === 'BUY'}
+										<TrendingUp class="h-3.5 w-3.5 text-green-500 sm:h-4 sm:w-4" />
+										<span class="text-green-500">BUY</span>
+									{:else}
+										<TrendingDown class="h-3.5 w-3.5 text-red-500 sm:h-4 sm:w-4" />
+										<span class="text-red-500">SELL</span>
+									{/if}
+									<span class="text-muted-foreground">|</span>
+									<span>{formatValue(trade.totalValue)}</span>
+								</div>
+
+								<div
+									class="text-muted-foreground flex items-center gap-1 text-xs sm:gap-1 sm:text-sm"
+								>
+									<Clock class="h-3 w-3 sm:h-4 sm:w-4" />
+									<span class="whitespace-nowrap font-mono"
+										>{formatRelativeTime(new Date(trade.timestamp))}</span
+									>
+								</div>
 							</div>
 						</div>
 					{/each}
-				</div>
-			{/if}
+				{/if}
+			</div>
 		</CardContent>
 	</Card>
 </div>
