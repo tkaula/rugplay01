@@ -6,6 +6,7 @@
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
 	import DataTable from '$lib/components/self/DataTable.svelte';
+	import HomeSkeleton from '$lib/components/self/skeletons/HomeSkeleton.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -102,11 +103,7 @@
 	</header>
 
 	{#if loading}
-		<div class="flex h-96 items-center justify-center">
-			<div class="text-center">
-				<div class="mb-4 text-xl">Loading market data...</div>
-			</div>
-		</div>
+		<HomeSkeleton />
 	{:else if coins.length === 0}
 		<div class="flex h-96 items-center justify-center">
 			<div class="text-center">

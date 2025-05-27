@@ -7,6 +7,7 @@
 	import TradeModal from '$lib/components/self/TradeModal.svelte';
 	import CommentSection from '$lib/components/self/CommentSection.svelte';
 	import UserProfilePreview from '$lib/components/self/UserProfilePreview.svelte';
+	import CoinSkeleton from '$lib/components/self/skeletons/CoinSkeleton.svelte';
 	import { TrendingUp, TrendingDown, DollarSign, Coins, ChartColumn } from 'lucide-svelte';
 	import {
 		createChart,
@@ -259,26 +260,17 @@
 		onSuccess={handleTradeSuccess}
 	/>
 {/if}
-
-{#if loading}
-	<div class="container mx-auto max-w-7xl p-6">
-		<div class="flex h-96 items-center justify-center">
-			<div class="text-center">
-				<div class="mb-4 text-xl">Loading coin data...</div>
-			</div>
-		</div>
-	</div>
-{:else if !coin}
-	<div class="container mx-auto max-w-7xl p-6">
+<div class="container mx-auto max-w-7xl p-6">
+	{#if loading}
+		<CoinSkeleton />
+	{:else if !coin}
 		<div class="flex h-96 items-center justify-center">
 			<div class="text-center">
 				<div class="text-muted-foreground mb-4 text-xl">Coin not found</div>
 				<Button onclick={() => goto('/')}>Go Home</Button>
 			</div>
 		</div>
-	</div>
-{:else}
-	<div class="container mx-auto max-w-7xl p-6">
+	{:else}
 		<!-- Header Section -->
 		<header class="mb-8">
 			<div class="mb-4 flex items-start justify-between">
@@ -535,5 +527,5 @@
 			<!-- Comments Section -->
 			<CommentSection {coinSymbol} />
 		</div>
-	</div>
-{/if}
+	{/if}
+</div>

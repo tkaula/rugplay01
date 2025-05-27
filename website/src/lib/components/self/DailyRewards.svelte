@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Gift, Clock, CheckCircle, Flame, Loader2 } from 'lucide-svelte';
+	import { Gift, Clock, Loader2, CheckIcon } from 'lucide-svelte';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { fetchPortfolioData } from '$lib/stores/portfolio-data';
 	import { toast } from 'svelte-sonner';
@@ -143,7 +143,7 @@
 		<Loader2 class="h-4 w-4 animate-spin" />
 		<span>{!rewardStatus ? 'Loading...' : 'Claiming...'}</span>
 	{:else if claimState === 'success'}
-		<CheckCircle class="h-4 w-4" />
+		<CheckIcon class="h-4 w-4" />
 		<span>Claimed!</span>
 	{:else if rewardStatus.canClaim}
 		<Gift class="h-4 w-4" />

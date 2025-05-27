@@ -4,6 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import DataTable from '$lib/components/self/DataTable.svelte';
+	import LeaderboardSkeleton from '$lib/components/self/skeletons/LeaderboardSkeleton.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -215,11 +216,7 @@
 	</header>
 
 	{#if loading}
-		<div class="flex h-96 items-center justify-center">
-			<div class="text-center">
-				<div class="mb-4 text-xl">Loading leaderboard...</div>
-			</div>
-		</div>
+		<LeaderboardSkeleton />
 	{:else if !leaderboardData}
 		<div class="flex h-96 items-center justify-center">
 			<div class="text-center">

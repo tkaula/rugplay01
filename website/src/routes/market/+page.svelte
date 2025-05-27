@@ -8,6 +8,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Label } from '$lib/components/ui/label';
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
+	import MarketSkeleton from '$lib/components/self/skeletons/MarketSkeleton.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -410,12 +411,7 @@
 
 	<!-- Market Grid -->
 	{#if loading}
-		<div class="flex h-96 items-center justify-center">
-			<div class="text-center">
-				<div class="mb-4 text-xl">Loading market data...</div>
-				<div class="text-muted-foreground">Fetching the latest coin prices and chaos levels</div>
-			</div>
-		</div>
+		<MarketSkeleton />
 	{:else if coins.length === 0}
 		<div class="flex h-96 items-center justify-center">
 			<div class="text-center">

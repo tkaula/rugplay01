@@ -13,7 +13,7 @@
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Plus, Ticket, Users, Calendar, CheckCircle, XCircle, Loader2 } from 'lucide-svelte';
+	import { Plus, Ticket, Users, Calendar, XCircle, Loader2, CheckIcon } from 'lucide-svelte';
 	import { USER_DATA } from '$lib/stores/user-data';
 	import { formatDate, getExpirationDate } from '$lib/utils';
 	import type { PromoCode } from '$lib/types/promo-code';
@@ -216,7 +216,7 @@
 								class={createSuccess ? 'text-success' : ''}
 							>
 								{#if createSuccess}
-									<CheckCircle class="h-4 w-4 text-green-600" />
+									<CheckIcon class="h-4 w-4 text-green-600" />
 								{:else}
 									<XCircle class="h-4 w-4" />
 								{/if}

@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import DataTable from '$lib/components/self/DataTable.svelte';
 	import ProfileBadges from '$lib/components/self/ProfileBadges.svelte';
+	import ProfileSkeleton from '$lib/components/self/skeletons/ProfileSkeleton.svelte';
 	import { getPublicUrl, formatPrice, formatValue, formatQuantity, formatDate } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -15,8 +16,7 @@
 		TrendingDown,
 		Coins,
 		Receipt,
-		Activity,
-		RefreshCw
+		Activity
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import type { UserProfileData } from '$lib/types/user-profile';
@@ -208,12 +208,7 @@
 
 <div class="container mx-auto max-w-6xl p-6">
 	{#if loading}
-		<div class="flex h-96 items-center justify-center">
-			<div class="text-center">
-				<RefreshCw class="text-muted-foreground mx-auto mb-4 h-8 w-8 animate-spin" />
-				<div class="text-xl">Loading profile...</div>
-			</div>
-		</div>
+		<ProfileSkeleton />
 	{:else if !profileData}
 		<div class="flex h-96 items-center justify-center">
 			<div class="text-center">

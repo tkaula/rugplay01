@@ -64,6 +64,16 @@ export function formatValue(value: number | string): string {
     if (numValue >= 1e9) return `$${(numValue / 1e9).toFixed(2)}B`;
     if (numValue >= 1e6) return `$${(numValue / 1e6).toFixed(2)}M`;
     if (numValue >= 1e3) return `$${(numValue / 1e3).toFixed(2)}K`;
+
+    if (numValue < 0.01) {
+        const str = numValue.toString();
+        const match = str.match(/^0\.0*(\d{2})/);
+        if (match) {
+            const zerosAfterDecimal = str.indexOf(match[1]) - 2;
+            return `$${numValue.toFixed(zerosAfterDecimal + 2)}`;
+        }
+    }
+
     return `$${numValue.toFixed(2)}`;
 }
 

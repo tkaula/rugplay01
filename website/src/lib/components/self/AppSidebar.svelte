@@ -23,7 +23,8 @@
 		Settings,
 		Gift,
 		Shield,
-		Ticket
+		Ticket,
+		BarChart3
 	} from 'lucide-svelte';
 	import { mode, setMode } from 'mode-watcher';
 	import type { HTMLAttributes } from 'svelte/elements';
@@ -44,6 +45,7 @@
 			{ title: 'Market', url: '/market', icon: Store },
 			{ title: 'Portfolio', url: '/portfolio', icon: BriefcaseBusiness },
 			{ title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
+			{ title: 'Treemap', url: '/treemap', icon: BarChart3 },
 			{ title: 'Create coin', url: '/coin/create', icon: Coins }
 		]
 	};

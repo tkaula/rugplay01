@@ -180,6 +180,13 @@ export async function POST({ params, request }) {
                     updatedAt: new Date()
                 })
                 .where(eq(coin.id, coinData.id));
+
+            await redis.publish(`prices:${normalizedSymbol}`, JSON.stringify({
+                currentPrice: newPrice,
+                marketCap: Number(coinData.circulatingSupply) * newPrice,
+                change24h: metrics.change24h,
+                volume24h: metrics.volume24h
+            }));
         });
 
         // REDIS
@@ -313,6 +320,13 @@ export async function POST({ params, request }) {
                     updatedAt: new Date()
                 })
                 .where(eq(coin.id, coinData.id));
+
+            await redis.publish(`prices:${normalizedSymbol}`, JSON.stringify({
+                currentPrice: newPrice,
+                marketCap: Number(coinData.circulatingSupply) * newPrice,
+                change24h: metrics.change24h,
+                volume24h: metrics.volume24h
+            }));
         });
 
         // REDIS
