@@ -13,18 +13,25 @@ RUN apt-get update -qq && \
     python-is-python3 \
     curl \
     ca-certificates \
-    unzip && \
-    rm -rf /var/lib/apt/lists/*
+    unzip \
+    libc6 \
+    && rm -rf /var/lib/apt/lists/*
 
 FROM base-node AS build-main
 
 # Copy package files
 COPY website/package.json website/package-lock.json* ./
 
-RUN npm install --include=dev
+# Install dependencies with platform-specific binaries
+RUN npm install --include=dev --platform=linux --arch=x64
 
-COPY website/. ./
+# Copy the rest of the application
+COPY website/. .
 
+# Create .svelte-kit directory if it doesn't exist
+RUN mkdir -p .svelte-kit
+
+# Generate SvelteKit types and build
 RUN npm run build
 
 FROM base-node AS build-websocket
