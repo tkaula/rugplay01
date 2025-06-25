@@ -54,7 +54,7 @@ export const POST: RequestHandler = async ({ request }) => {
                 throw new Error(`Insufficient funds. You need *${roundedAmount.toFixed(2)} but only have *${roundedBalance.toFixed(2)}`);
             }
 
-            const gameResult = randomInt(1, 7);
+            const gameResult = randomInt(1, 6);
             const won = gameResult === selectedNumber;
 
             const multiplier = 3;
