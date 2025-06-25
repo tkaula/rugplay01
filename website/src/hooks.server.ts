@@ -7,6 +7,7 @@ import { redirect, type Handle } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { minesCleanupInactiveGames, minesAutoCashout } from '$lib/server/games/mines';
 
 async function initializeScheduler() {
     if (building) return;
@@ -49,10 +50,16 @@ async function initializeScheduler() {
                 processAccountDeletions().catch(console.error);
             }, 5 * 60 * 1000);
 
+            const minesCleanupInterval = setInterval(() => {
+                minesCleanupInactiveGames().catch(console.error);
+                minesAutoCashout().catch(console.error);
+            }, 60 * 1000);
+
             // Cleanup on process exit
             const cleanup = async () => {
                 clearInterval(renewInterval);
                 clearInterval(schedulerInterval);
+                clearInterval(minesCleanupInterval);
                 const currentValue = await redis.get(lockKey);
                 if (currentValue === lockValue) {
                     await redis.del(lockKey);
@@ -171,6 +178,13 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
 
     event.locals.userSession = userData;
+
+    if (event.url.pathname.startsWith('/api/')) {
+        const response = await svelteKitHandler({ event, resolve, auth });
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+        return response;
+    }
 
     return svelteKitHandler({ event, resolve, auth });
 };
