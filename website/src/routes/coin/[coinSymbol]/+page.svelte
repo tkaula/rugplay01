@@ -11,7 +11,7 @@
 	import CoinSkeleton from '$lib/components/self/skeletons/CoinSkeleton.svelte';
 	import TopHolders from '$lib/components/self/TopHolders.svelte';
 	import { TrendingUp, TrendingDown, DollarSign, Coins, ChartColumn } from 'lucide-svelte';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import CoinIcon from '$lib/components/self/CoinIcon.svelte';
@@ -44,6 +44,8 @@
 	let candlestickSeries: any = null;
 	let volumeSeries: any = null;
 	let chartLibrary: any = null;
+	let chartInitialized = $state(false);
+	let resizeHandler: (() => void) | null = null;
 
 	const timeframeOptions = [
 		{ value: '1m', label: '1 minute' },
@@ -58,8 +60,14 @@
 		// Only import chart library on client-side
 		if (browser) {
 			try {
-				const { createChart, ColorType, CandlestickSeries, HistogramSeries } = await import('lightweight-charts');
-				chartLibrary = { createChart, ColorType, CandlestickSeries, HistogramSeries };
+				const chartModule = await import('lightweight-charts');
+				chartLibrary = {
+					createChart: chartModule.createChart,
+					ColorType: chartModule.ColorType,
+					CandlestickSeries: chartModule.CandlestickSeries,
+					HistogramSeries: chartModule.HistogramSeries
+				};
+				console.log('Chart library loaded successfully');
 			} catch (e) {
 				console.error('Failed to load chart library:', e);
 			}
@@ -67,19 +75,40 @@
 
 		await loadUserHolding();
 
-		websocketController.setCoin(coinSymbol.toUpperCase());
-		websocketController.subscribeToPriceUpdates(coinSymbol.toUpperCase(), handlePriceUpdate);
+		if (browser) {
+			websocketController.setCoin(coinSymbol.toUpperCase());
+			websocketController.subscribeToPriceUpdates(coinSymbol.toUpperCase(), handlePriceUpdate);
+		}
 
 		previousCoinSymbol = coinSymbol;
 	});
 
-	$effect(() => {
-		return () => {
+	onDestroy(() => {
+		if (browser) {
+			cleanupChart();
 			if (previousCoinSymbol) {
 				websocketController.unsubscribeFromPriceUpdates(previousCoinSymbol.toUpperCase());
 			}
-		};
+		}
 	});
+
+	function cleanupChart() {
+		if (!browser) return;
+		
+		if (resizeHandler) {
+			window.removeEventListener('resize', resizeHandler);
+			resizeHandler = null;
+		}
+		
+		if (chart) {
+			chart.remove();
+			chart = null;
+		}
+		
+		candlestickSeries = null;
+		volumeSeries = null;
+		chartInitialized = false;
+	}
 
 	$effect(() => {
 		if (coinSymbol && previousCoinSymbol && coinSymbol !== previousCoinSymbol) {
@@ -89,145 +118,31 @@
 			volumeData = [];
 			userHolding = 0;
 
-			websocketController.unsubscribeFromPriceUpdates(previousCoinSymbol.toUpperCase());
+			if (browser) {
+				websocketController.unsubscribeFromPriceUpdates(previousCoinSymbol.toUpperCase());
+			}
 
 			loadCoinData().then(() => {
 				loadUserHolding();
-				websocketController.setCoin(coinSymbol.toUpperCase());
-				websocketController.subscribeToPriceUpdates(coinSymbol.toUpperCase(), handlePriceUpdate);
+				if (browser) {
+					websocketController.setCoin(coinSymbol.toUpperCase());
+					websocketController.subscribeToPriceUpdates(coinSymbol.toUpperCase(), handlePriceUpdate);
+				}
 				previousCoinSymbol = coinSymbol;
 			});
 		}
 	});
 
-	async function loadCoinData() {
-		try {
-			loading = true;
-			const response = await fetch(`/api/coin/${coinSymbol}?timeframe=${selectedTimeframe}`);
-
-			if (!response.ok) {
-				toast.error(response.status === 404 ? 'Coin not found' : 'Failed to load coin data');
-				return;
-			}
-
-			const result = await response.json();
-			coin = result.coin;
-			chartData = result.candlestickData || [];
-			volumeData = result.volumeData || [];
-		} catch (e) {
-			console.error('Failed to fetch coin data:', e);
-			toast.error('Failed to load coin data');
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function loadUserHolding() {
-		if (!$USER_DATA) return;
-
-		try {
-			const response = await fetch('/api/portfolio/total');
-			if (response.ok) {
-				const result = await response.json();
-				const holding = result.coinHoldings.find((h: any) => h.symbol === coinSymbol.toUpperCase());
-				userHolding = holding ? holding.quantity : 0;
-			}
-		} catch (e) {
-			console.error('Failed to load user holding:', e);
-		}
-	}
-	async function handleTradeSuccess() {
-		await Promise.all([loadCoinData(), loadUserHolding(), fetchPortfolioSummary()]);
-	}
-	function handlePriceUpdate(priceUpdate: PriceUpdate) {
-		if (coin && priceUpdate.coinSymbol === coinSymbol.toUpperCase()) {
-			// throttle updates to prevent excessive UI updates, 1s interval
-			const now = Date.now();
-			if (now - lastPriceUpdateTime < 1000) {
-				return;
-			}
-			lastPriceUpdateTime = now;
-
-			coin = {
-				...coin,
-				currentPrice: priceUpdate.currentPrice,
-				marketCap: priceUpdate.marketCap,
-				change24h: priceUpdate.change24h,
-				volume24h: priceUpdate.volume24h,
-				...(priceUpdate.poolCoinAmount !== undefined && {
-					poolCoinAmount: priceUpdate.poolCoinAmount
-				}),
-				...(priceUpdate.poolBaseCurrencyAmount !== undefined && {
-					poolBaseCurrencyAmount: priceUpdate.poolBaseCurrencyAmount
-				})
-			};
-
-			updateChartRealtime(priceUpdate.currentPrice);
-		}
-	}
-
-	function updateChartRealtime(newPrice: number) {
-		if (!candlestickSeries || !chart || chartData.length === 0) return;
-
-		const timeframeSeconds = getTimeframeInSeconds(selectedTimeframe);
-		const currentTime = Math.floor(Date.now() / 1000);
-
-		const currentCandleTime = Math.floor(currentTime / timeframeSeconds) * timeframeSeconds;
-		const localCandleTime = timeToLocal(currentCandleTime);
-
-		const lastCandle = chartData[chartData.length - 1];
-
-		if (lastCandle && lastCandle.time === localCandleTime) {
-			const updatedCandle = {
-				time: localCandleTime,
-				open: lastCandle.open,
-				high: Math.max(lastCandle.high, newPrice),
-				low: Math.min(lastCandle.low, newPrice),
-				close: newPrice
-			};
-
-			candlestickSeries.update(updatedCandle);
-			chartData[chartData.length - 1] = updatedCandle;
-		} else if (localCandleTime > (lastCandle?.time || 0)) {
-			const newCandle = {
-				time: localCandleTime,
-				open: newPrice,
-				high: newPrice,
-				low: newPrice,
-				close: newPrice
-			};
-
-			candlestickSeries.update(newCandle);
-			chartData.push(newCandle);
-		}
-	}
-
-	async function handleTimeframeChange(timeframe: string) {
-		selectedTimeframe = timeframe;
-		loading = true;
-
-		if (chart) {
-			chart.remove();
-			chart = null;
-		}
-
-		await loadCoinData();
-		loading = false;
-	}
-
-	let currentTimeframeLabel = $derived(
-		timeframeOptions.find((option) => option.value === selectedTimeframe)?.label || '1 minute'
-	);
-
+	// Chart initialization effect
 	$effect(() => {
-		if (!browser || !chartLibrary) return;
-
-		if (chart && chartData.length > 0) {
-			chart.remove();
-			chart = null;
+		if (!browser || !chartLibrary || !chartContainer || !chartData || chartData.length === 0) {
+			return;
 		}
 
-		if (chartContainer && chartData.length > 0) {
+		// Clean up existing chart
+		cleanupChart();
+
+		try {
 			const { createChart, ColorType, CandlestickSeries, HistogramSeries } = chartLibrary;
 			
 			chart = createChart(chartContainer, {
@@ -306,23 +221,146 @@
 
 			chart.timeScale().fitContent();
 
-			const handleResize = () => chart?.applyOptions({ width: chartContainer?.clientWidth });
-			window.addEventListener('resize', handleResize);
-			handleResize();
+			// Setup resize handler
+			resizeHandler = () => {
+				if (chart && chartContainer) {
+					chart.applyOptions({ width: chartContainer.clientWidth });
+				}
+			};
+			window.addEventListener('resize', resizeHandler);
+			resizeHandler(); // Initial call
 
 			candlestickSeries.priceScale().applyOptions({ borderColor: '#71649C' });
 			volumeSeries.priceScale().applyOptions({ borderColor: '#71649C' });
 			chart.timeScale().applyOptions({ borderColor: '#71649C' });
 
-			return () => {
-				window.removeEventListener('resize', handleResize);
-				if (chart) {
-					chart.remove();
-					chart = null;
-				}
-			};
+			chartInitialized = true;
+			console.log('Chart initialized successfully');
+		} catch (error) {
+			console.error('Failed to initialize chart:', error);
 		}
 	});
+
+	async function loadCoinData() {
+		try {
+			loading = true;
+			const response = await fetch(`/api/coin/${coinSymbol}?timeframe=${selectedTimeframe}`);
+
+			if (!response.ok) {
+				toast.error(response.status === 404 ? 'Coin not found' : 'Failed to load coin data');
+				return;
+			}
+
+			const result = await response.json();
+			coin = result.coin;
+			chartData = result.candlestickData || [];
+			volumeData = result.volumeData || [];
+		} catch (e) {
+			console.error('Failed to fetch coin data:', e);
+			toast.error('Failed to load coin data');
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function loadUserHolding() {
+		if (!$USER_DATA) return;
+
+		try {
+			const response = await fetch('/api/portfolio/total');
+			if (response.ok) {
+				const result = await response.json();
+				const holding = result.coinHoldings.find((h: any) => h.symbol === coinSymbol.toUpperCase());
+				userHolding = holding ? holding.quantity : 0;
+			}
+		} catch (e) {
+			console.error('Failed to load user holding:', e);
+		}
+	}
+
+	async function handleTradeSuccess() {
+		await Promise.all([loadCoinData(), loadUserHolding(), fetchPortfolioSummary()]);
+	}
+
+	function handlePriceUpdate(priceUpdate: PriceUpdate) {
+		if (!browser || !coin || priceUpdate.coinSymbol !== coinSymbol.toUpperCase()) {
+			return;
+		}
+
+		// throttle updates to prevent excessive UI updates, 1s interval
+		const now = Date.now();
+		if (now - lastPriceUpdateTime < 1000) {
+			return;
+		}
+		lastPriceUpdateTime = now;
+
+		coin = {
+			...coin,
+			currentPrice: priceUpdate.currentPrice,
+			marketCap: priceUpdate.marketCap,
+			change24h: priceUpdate.change24h,
+			volume24h: priceUpdate.volume24h,
+			...(priceUpdate.poolCoinAmount !== undefined && {
+				poolCoinAmount: priceUpdate.poolCoinAmount
+			}),
+			...(priceUpdate.poolBaseCurrencyAmount !== undefined && {
+				poolBaseCurrencyAmount: priceUpdate.poolBaseCurrencyAmount
+			})
+		};
+
+		updateChartRealtime(priceUpdate.currentPrice);
+	}
+
+	function updateChartRealtime(newPrice: number) {
+		if (!browser || !candlestickSeries || !chart || chartData.length === 0) return;
+
+		const timeframeSeconds = getTimeframeInSeconds(selectedTimeframe);
+		const currentTime = Math.floor(Date.now() / 1000);
+
+		const currentCandleTime = Math.floor(currentTime / timeframeSeconds) * timeframeSeconds;
+		const localCandleTime = timeToLocal(currentCandleTime);
+
+		const lastCandle = chartData[chartData.length - 1];
+
+		if (lastCandle && lastCandle.time === localCandleTime) {
+			const updatedCandle = {
+				time: localCandleTime,
+				open: lastCandle.open,
+				high: Math.max(lastCandle.high, newPrice),
+				low: Math.min(lastCandle.low, newPrice),
+				close: newPrice
+			};
+
+			candlestickSeries.update(updatedCandle);
+			chartData[chartData.length - 1] = updatedCandle;
+		} else if (localCandleTime > (lastCandle?.time || 0)) {
+			const newCandle = {
+				time: localCandleTime,
+				open: newPrice,
+				high: newPrice,
+				low: newPrice,
+				close: newPrice
+			};
+
+			candlestickSeries.update(newCandle);
+			chartData.push(newCandle);
+		}
+	}
+
+	async function handleTimeframeChange(timeframe: string) {
+		selectedTimeframe = timeframe;
+		loading = true;
+
+		// Clean up chart before loading new data
+		cleanupChart();
+
+		await loadCoinData();
+		loading = false;
+	}
+
+	let currentTimeframeLabel = $derived(
+		timeframeOptions.find((option) => option.value === selectedTimeframe)?.label || '1 minute'
+	);
 
 	function formatPrice(price: number): string {
 		if (price < 0.000001) {
