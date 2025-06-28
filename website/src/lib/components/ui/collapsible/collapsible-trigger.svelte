@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { Collapsible as CollapsiblePrimitive } from "bits-ui";
+	import { browser } from "$app/environment";
 
-	let { ref = $bindable(null), ...restProps }: CollapsiblePrimitive.TriggerProps = $props();
+	let { 
+		ref = $bindable(null), 
+		children,
+		...restProps 
+	}: CollapsiblePrimitive.TriggerProps = $props();
 </script>
 
-<CollapsiblePrimitive.Trigger bind:ref data-slot="collapsible-trigger" {...restProps} />
+{#if browser}
+	<CollapsiblePrimitive.Trigger bind:ref data-slot="collapsible-trigger" {...restProps} />
+{:else}
+	<button data-slot="collapsible-trigger" {...restProps}>
+		{@render children?.()}
+	</button>
+{/if}
