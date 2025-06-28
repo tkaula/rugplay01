@@ -19,10 +19,20 @@ export async function GET({ params, request }) {
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
         const buffer = await response.arrayBuffer();
 
+        let cacheControl: string;
+        
+        if (path.includes('/coin/') || path.includes('coin-icon')) {
+            cacheControl = 'public, max-age=31536000, immutable';
+        } else if (path.includes('/avatars/') || path.includes('profile-') || path.includes('avatar')) {
+            cacheControl = 'public, max-age=60';
+        } else {
+            cacheControl = 'public, max-age=86400';
+        }
+
         return new Response(buffer, {
             headers: {
                 'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=60',
+                'Cache-Control': cacheControl,
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET',
                 'Access-Control-Allow-Headers': 'Content-Type'
