@@ -11,13 +11,6 @@
 	import CoinSkeleton from '$lib/components/self/skeletons/CoinSkeleton.svelte';
 	import TopHolders from '$lib/components/self/TopHolders.svelte';
 	import { TrendingUp, TrendingDown, DollarSign, Coins, ChartColumn } from 'lucide-svelte';
-	import {
-		createChart,
-		ColorType,
-		type IChartApi,
-		CandlestickSeries,
-		HistogramSeries
-	} from 'lightweight-charts';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -28,6 +21,7 @@
 	import { websocketController, type PriceUpdate, isConnectedStore } from '$lib/stores/websocket';
 	import SEO from '$lib/components/self/SEO.svelte';
 	import SignInConfirmDialog from '$lib/components/self/SignInConfirmDialog.svelte';
+	import { browser } from '$app/environment';
 
 	const { data } = $props();
 	let coinSymbol = $derived(data.coinSymbol);
@@ -44,6 +38,13 @@
 
 	let previousCoinSymbol = $state<string | null>(null);
 
+	// Chart-related variables - only used on client
+	let chartContainer = $state<HTMLDivElement>();
+	let chart: any = null;
+	let candlestickSeries: any = null;
+	let volumeSeries: any = null;
+	let chartLibrary: any = null;
+
 	const timeframeOptions = [
 		{ value: '1m', label: '1 minute' },
 		{ value: '5m', label: '5 minutes' },
@@ -54,6 +55,16 @@
 	];
 
 	onMount(async () => {
+		// Only import chart library on client-side
+		if (browser) {
+			try {
+				const { createChart, ColorType, CandlestickSeries, HistogramSeries } = await import('lightweight-charts');
+				chartLibrary = { createChart, ColorType, CandlestickSeries, HistogramSeries };
+			} catch (e) {
+				console.error('Failed to load chart library:', e);
+			}
+		}
+
 		await loadUserHolding();
 
 		websocketController.setCoin(coinSymbol.toUpperCase());
@@ -208,18 +219,17 @@
 		timeframeOptions.find((option) => option.value === selectedTimeframe)?.label || '1 minute'
 	);
 
-	let chartContainer = $state<HTMLDivElement>();
-	let chart: IChartApi | null = null;
-	let candlestickSeries: any = null;
-	let volumeSeries: any = null;
-
 	$effect(() => {
+		if (!browser || !chartLibrary) return;
+
 		if (chart && chartData.length > 0) {
 			chart.remove();
 			chart = null;
 		}
 
 		if (chartContainer && chartData.length > 0) {
+			const { createChart, ColorType, CandlestickSeries, HistogramSeries } = chartLibrary;
+			
 			chart = createChart(chartContainer, {
 				layout: {
 					textColor: '#666666',
@@ -254,6 +264,7 @@
 					horzLine: { color: '#758696', width: 1, style: 2, visible: true, labelVisible: true }
 				}
 			});
+
 			candlestickSeries = chart.addSeries(CandlestickSeries, {
 				upColor: '#26a69a',
 				downColor: '#ef5350',
