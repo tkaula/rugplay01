@@ -370,6 +370,7 @@
 		: `${coinSymbol} virtual cryptocurrency, crypto trading simulation, virtual coin trading`}
 	image={coin?.icon ? getPublicUrl(coin.icon) : '/apple-touch-icon.png'}
 	imageAlt={coin ? `${coin.name} (${coin.symbol}) logo` : `${coinSymbol} cryptocurrency logo`}
+	twitterCard="summary"
 />
 
 <SignInConfirmDialog bind:open={shouldSignIn} />

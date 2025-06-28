@@ -357,6 +357,7 @@
 		? `${profileData.profile.name}'s profile picture`
 		: `@${username}'s profile`}
 	keywords="crypto trader profile game, virtual trading portfolio, cryptocurrency simulation game, user portfolio simulator"
+	twitterCard="summary"
 />
 
 <div class="container mx-auto max-w-6xl p-6">
