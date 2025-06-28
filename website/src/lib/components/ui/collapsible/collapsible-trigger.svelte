@@ -10,7 +10,9 @@
 </script>
 
 {#if browser}
-	<CollapsiblePrimitive.Trigger bind:ref data-slot="collapsible-trigger" {...restProps} />
+	<CollapsiblePrimitive.Trigger bind:ref data-slot="collapsible-trigger" {...restProps}>
+		{@render children?.()}
+	</CollapsiblePrimitive.Trigger>
 {:else}
 	<button data-slot="collapsible-trigger" {...restProps}>
 		{@render children?.()}

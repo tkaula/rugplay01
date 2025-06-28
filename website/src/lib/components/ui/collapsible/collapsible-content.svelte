@@ -10,7 +10,9 @@
 </script>
 
 {#if browser}
-	<CollapsiblePrimitive.Content bind:ref data-slot="collapsible-content" {...restProps} />
+	<CollapsiblePrimitive.Content bind:ref data-slot="collapsible-content" {...restProps}>
+		{@render children?.()}
+	</CollapsiblePrimitive.Content>
 {:else}
 	<div data-slot="collapsible-content" {...restProps}>
 		{@render children?.()}

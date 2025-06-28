@@ -11,7 +11,9 @@
 </script>
 
 {#if browser}
-	<CollapsiblePrimitive.Root bind:ref bind:open data-slot="collapsible" {...restProps} />
+	<CollapsiblePrimitive.Root bind:ref bind:open data-slot="collapsible" {...restProps}>
+		{@render children?.()}
+	</CollapsiblePrimitive.Root>
 {:else}
 	<div data-slot="collapsible">
 		{@render children?.()}
