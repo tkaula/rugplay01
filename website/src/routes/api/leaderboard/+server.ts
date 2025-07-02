@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { user, transaction, userPortfolio, coin } from '$lib/server/db/schema';
-import { eq, desc, gte, and, sql, inArray } from 'drizzle-orm';
+import { eq, desc, gte, and, sql, inArray, ilike } from 'drizzle-orm';
 
-export async function GET() {
+async function getLeaderboardData() {
     try {
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -182,4 +182,41 @@ export async function GET() {
             paperMillionaires: []
         });
     }
+}
+
+async function getSearchedUsers(query: string) {
+    try {
+        return await db.select({
+            userId: user.id,
+            username: user.username,
+            name: user.name,
+            image: user.image,
+            coinsValue: sql<number>`COALESCE(SUM(CAST(${userPortfolio.quantity} AS NUMERIC) * CAST(${coin.currentPrice} AS NUMERIC)), 0)`,
+            balanceValue: user.baseCurrencyBalance,
+            totalSold: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'SELL' THEN CAST(${transaction.totalBaseCurrencyAmount} AS NUMERIC) ELSE 0 END), 0)`,
+            totalBought: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'BUY' THEN CAST(${transaction.totalBaseCurrencyAmount} AS NUMERIC) ELSE 0 END), 0)`
+        }).from(user)
+            .leftJoin(userPortfolio, eq(userPortfolio.userId, user.id))
+            .leftJoin(coin, eq(coin.id, userPortfolio.coinId))
+            .leftJoin(transaction, eq(transaction.userId, user.id))
+            .where(ilike(user.username, `%${query}%`))
+            .groupBy(user.id, user.username, user.name, user.image)
+            .orderBy(desc(sql`COALESCE(SUM(CAST(${userPortfolio.quantity} AS NUMERIC) * CAST(${coin.currentPrice} AS NUMERIC)), 0)`))
+            .limit(2);
+    } catch (error) {
+        return [];
+    }
+}
+
+export async function GET({ url }) {
+    const query = url.searchParams.get('search');
+
+    if(query?.trim() !== '' && query !== null) {
+        let users = await getSearchedUsers(query);
+        return json({
+            results: users
+        });
+    }
+
+    return await getLeaderboardData();
 }
