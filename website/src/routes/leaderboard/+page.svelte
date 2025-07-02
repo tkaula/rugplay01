@@ -7,14 +7,15 @@
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { TrendingDown, Crown, Skull, Target, RefreshCw, Trophy, Search, SearchX, X } from 'lucide-svelte';
-	import { formatValue } from '$lib/utils';
+	import { TrendingDown, Crown, Skull, Target, RefreshCw, Trophy, Search, SearchX, X, Wallet, Calendar } from 'lucide-svelte';
+	import { formatValue, getPublicUrl } from '$lib/utils';
 	import Input from '$lib/components/ui/input/input.svelte';
-	import * as HoverCard from '$lib/components/ui/hover-card';
-	import * as Avatar from '$lib/components/ui/avatar';
-	import { getPublicUrl } from '$lib/utils';
 	import UserProfilePreview from '$lib/components/self/UserProfilePreview.svelte';
+	import LeaderboardSearchSkeleton from '$lib/components/self/skeletons/LeaderboardSearchSkeleton.svelte';
+	import * as Avatar from '$lib/components/ui/avatar';
+	import ProfileBadges from '$lib/components/self/ProfileBadges.svelte';
 
+	let searchOffset = $state(0);
 	let searchQuery = $state('');
 	let searchQueryValue = $state('');
 	let searchQueryTimeout = $state<NodeJS.Timeout | null>(null);
@@ -32,26 +33,29 @@
 	});
 
 	function handleSearchKeydown(event: KeyboardEvent) {
+		if (!/^[a-zA-Z0-9]$/.test(event.key) && event.key !== 'Enter') {
+			return;
+		}
 		if (searchQueryTimeout) {
 			clearTimeout(searchQueryTimeout);
+		}
+
+		if (event.key === 'Enter') {
+			searchQueryValue = searchQuery;
+			fetchLeaderboardData();
+			return;
 		}
 
 		searchQueryTimeout = setTimeout(() => {
 			searchQueryValue = searchQuery;
 			fetchLeaderboardData();
 		}, 500);
-		
-		if (event.key === 'Enter') {
-			clearTimeout(searchQueryTimeout);
-			searchQueryValue = searchQuery;
-			fetchLeaderboardData();
-		}
 	}
 
-	async function fetchLeaderboardData() {
+	async function fetchLeaderboardData(offset = 0) {
 		loading = true;
 		try {
-			const response = await fetch(`/api/leaderboard?search=${searchQueryValue}`);
+			const response = await fetch(`/api/leaderboard?search=${searchQueryValue}&offset=${offset}`);
 			if (response.ok) {
 				leaderboardData = await response.json();
 			} else {
@@ -254,9 +258,9 @@
 				<p class="text-muted-foreground text-sm md:text-base">Top performers and market activity</p>
 			</div>
 			<div class="flex items-center gap-4">
-				<div class="flex items-center relative">
+				<div class="flex items-center relative flex-grow">
 					<Search size={16} class="absolute left-3 pointer-events-none"></Search>
-					<Input type="text" placeholder="Search" class="pl-10" bind:value={searchQuery} onkeydown={handleSearchKeydown} />
+					<Input type="text" placeholder="Search by username..." class="pl-10 flex-grow" bind:value={searchQuery} onkeydown={handleSearchKeydown} />
 				</div>
 				{#if searchQueryValue}
 					<Button variant="outline" onclick={() => {
@@ -267,15 +271,18 @@
 						<X class="h-4 w-4" />
 					</Button>
 				{/if}
-				<Button variant="outline" onclick={fetchLeaderboardData} disabled={loading} class="w-fit">
+				<Button variant="outline" onclick={() => fetchLeaderboardData(searchOffset)} disabled={loading} class="w-fit">
 					<RefreshCw class="h-4 w-4" />
 				</Button>
 			</div>
 		</div>
 	</header>
-
 	{#if loading}
-		<LeaderboardSkeleton />
+		{#if searchQueryValue}
+			<LeaderboardSearchSkeleton />
+		{:else}
+			<LeaderboardSkeleton />
+		{/if}
 	{:else if !leaderboardData}
 		<div class="flex h-96 items-center justify-center">
 			<div class="text-center">
@@ -287,17 +294,73 @@
 		<div class="grid gap-4 md:gap-6 xl:grid-cols-2">
 			{#if searchQueryValue}
 				{#if leaderboardData.results.length > 0}
-				<div class="flex flex-col xl:col-span-2">
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						{#each leaderboardData.results as user}
-							<div class="flex flex-col bg-muted rounded-md border border-border hover:bg-muted/50 transition ease duration-200">
-								<a href={`/user/${user.username}`}>
-									<UserProfilePreview userId={user.userId}/>
+					<div class="flex flex-col xl:col-span-2">
+						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+							{#each leaderboardData.results as user}
+								<a href={`/user/${user.username}`} class="flex flex-col bg-muted rounded-md border border-border hover:bg-muted/50 transition ease duration-200">
+									<div class="flex items-start gap-4 p-4">
+										<Avatar.Root class="h-12 w-12 shrink-0">
+											<Avatar.Image src={getPublicUrl(user.image)} alt={user.name} />
+											<Avatar.Fallback class="text-sm">{user.name?.charAt(0) || '?'}</Avatar.Fallback>
+										</Avatar.Root>
+										<div class="flex flex-col flex-grow">
+											<div class="flex items-center gap-2">
+												<h4 class="max-w-[150px] truncate text-sm font-semibold sm:max-w-[200px]">
+													{user.name}
+												</h4>
+												<ProfileBadges user={user} showId={true} size="sm"/>
+											</div>
+											<p class="text-muted-foreground text-sm">@{user.username}</p>
+											<div class="flex flex-col gap-1 mt-2">
+												<div class="flex items-center justify-between">
+													<span class="text-muted-foreground flex items-center gap-2 text-xs">
+														<Wallet class="h-3 w-3" />
+														Portfolio
+													</span>
+													<span class="font-mono text-sm font-medium">
+														{formatValue(user.totalPortfolioValue)}
+													</span>
+												</div>
+						
+												<div class="flex items-center justify-between">
+													<span class="text-muted-foreground flex items-center gap-2 text-xs">
+														<Wallet class="h-3 w-3" />
+														Cash
+													</span>
+													<span class="text-success font-mono text-sm font-medium">
+														{formatValue(user.baseCurrencyBalance)}
+													</span>
+												</div>
+											</div>
+											<div class="flex items-center gap-2 mt-2">
+												<Calendar class="h-4 w-4 text-muted-foreground" />
+												<p class="text-muted-foreground text-xs">Joined {new Date(user.createdAt).toLocaleDateString('en-US', {
+													year: 'numeric',
+													month: 'long'
+												})}</p>
+											</div>
+										</div>
+									</div>
 								</a>
-							</div>
-						{/each}
+							{/each}
+						</div>
 					</div>
-				</div>
+					<div class="flex flex-col gap-2 items-center justify-between xl:col-span-2 lg:flex-row">
+						<h2 class="text-sm text-muted-foreground">Showing {1 + searchOffset} - {Math.min(leaderboardData.results.length, 9) + searchOffset} of {leaderboardData.total} results</h2>
+						<div class="flex items-center w-full lg:w-auto justify-center lg:justify-end flex-grow gap-2 overflow-x-auto">
+							{#each Array(Math.ceil(leaderboardData.total / 9)) as _, index}
+								<Button variant={searchOffset === index * 9 ? 'outline' : 'ghost'} onclick={() => {
+									if(searchOffset === index * 9) return;
+									if(index * 9 > leaderboardData.total) return;
+
+									searchOffset = index * 9;
+									fetchLeaderboardData(searchOffset);
+								}}>
+									<h2 class="text-sm">{ index + 1 }</h2>
+								</Button>
+							{/each}
+						</div>
+					</div>
 				{:else}
 					<div class="flex flex-col xl:col-span-2 items-center justify-center h-60">
 						<h2 class="mb-4 text-xl">No users found</h2>

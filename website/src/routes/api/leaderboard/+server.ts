@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { user, transaction, userPortfolio, coin } from '$lib/server/db/schema';
-import { eq, desc, gte, and, sql, inArray, ilike } from 'drizzle-orm';
+import { eq, desc, gte, and, sql, inArray, ilike, count } from 'drizzle-orm';
 
 async function getLeaderboardData() {
     try {
@@ -184,27 +184,38 @@ async function getLeaderboardData() {
     }
 }
 
-async function getSearchedUsers(query: string) {
+async function getSearchedUsers(query: string, limit = 9, offset = 0) {
     try {
-        return await db.select({
-            userId: user.id,
-            username: user.username,
+        const results = await db.select({
+            id: user.id,
             name: user.name,
+            username: user.username,
             image: user.image,
-            coinsValue: sql<number>`COALESCE(SUM(CAST(${userPortfolio.quantity} AS NUMERIC) * CAST(${coin.currentPrice} AS NUMERIC)), 0)`,
-            balanceValue: user.baseCurrencyBalance,
-            totalSold: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'SELL' THEN CAST(${transaction.totalBaseCurrencyAmount} AS NUMERIC) ELSE 0 END), 0)`,
-            totalBought: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'BUY' THEN CAST(${transaction.totalBaseCurrencyAmount} AS NUMERIC) ELSE 0 END), 0)`
+            bio: user.bio,
+            baseCurrencyBalance: user.baseCurrencyBalance,
+            coinValue: sql<number>`COALESCE(SUM(CAST(${userPortfolio.quantity} AS NUMERIC) * CAST(${coin.currentPrice} AS NUMERIC)), 0)`,
+            totalPortfolioValue: sql<number>`CAST(${user.baseCurrencyBalance} AS NUMERIC) + COALESCE(SUM(CAST(${userPortfolio.quantity} AS NUMERIC) * CAST(${coin.currentPrice} AS NUMERIC)), 0)`,
+            createdAt: user.createdAt
         }).from(user)
             .leftJoin(userPortfolio, eq(userPortfolio.userId, user.id))
             .leftJoin(coin, eq(coin.id, userPortfolio.coinId))
-            .leftJoin(transaction, eq(transaction.userId, user.id))
+            .groupBy(user.id, user.name, user.username, user.image, user.bio, user.baseCurrencyBalance)
             .where(ilike(user.username, `%${query}%`))
-            .groupBy(user.id, user.username, user.name, user.image)
-            .orderBy(desc(sql`COALESCE(SUM(CAST(${userPortfolio.quantity} AS NUMERIC) * CAST(${coin.currentPrice} AS NUMERIC)), 0)`))
-            .limit(2);
+            .orderBy(desc(user.username))
+            .limit(limit)
+            .offset(offset);
+
+        const total = await db.select({ count: count() }).from(user).where(ilike(user.username, `%${query}%`)).limit(1);
+
+        return {
+            results,
+            total: total[0].count
+        }
     } catch (error) {
-        return [];
+        return {
+            results: [],
+            total: 0
+        }
     }
 }
 
@@ -212,10 +223,12 @@ export async function GET({ url }) {
     const query = url.searchParams.get('search');
 
     if(query?.trim() !== '' && query !== null) {
-        let users = await getSearchedUsers(query);
-        return json({
-            results: users
-        });
+        const limit = parseInt(url.searchParams.get('limit') || '9');
+        const offset = parseInt(url.searchParams.get('offset') || '0');
+
+        let users = await getSearchedUsers(query, limit, offset);
+
+        return json(users);
     }
 
     return await getLeaderboardData();
