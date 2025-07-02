@@ -94,7 +94,7 @@
 				<p class="text-muted-foreground text-sm">@{profile.username}</p>
 
 				{#if profile.bio && showBio}
-					<p class="text-sm min-h-[80px]">{profile.bio}</p>
+					<p class="text-sm">{profile.bio}</p>
 				{/if}
 
 				{#if stats}
