@@ -1,5 +1,11 @@
 <script lang="ts">
-    export let notification;
+    interface Notification {
+        type: 'HOPIUM' | 'TRANSFER' | 'RUG_PULL' | 'SYSTEM';
+        link?: string;
+        isRead: boolean;
+    }
+
+    export let notification: Notification;
     export let isNew = false;
 
     function getNotificationColorClasses(type: string, isNew: boolean, isRead: boolean) {
