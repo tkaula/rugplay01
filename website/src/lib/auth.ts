@@ -10,7 +10,7 @@ import { uploadProfilePicture } from "./server/s3";
 
 if (!privateEnv.GOOGLE_CLIENT_ID) throw new Error('GOOGLE_CLIENT_ID is not set');
 if (!privateEnv.GOOGLE_CLIENT_SECRET) throw new Error('GOOGLE_CLIENT_SECRET is not set');
-if (!publicEnv.PUBLIC_BETTER_AUTH_URL) throw new Error('BETTER_AUTH_URL is not set');
+if (!publicEnv.PUBLIC_BETTER_AUTH_URL) throw new Error('PUBLIC_BETTER_AUTH_URL is not set');
 
 export const auth = betterAuth({
     baseURL: publicEnv.PUBLIC_BETTER_AUTH_URL,
