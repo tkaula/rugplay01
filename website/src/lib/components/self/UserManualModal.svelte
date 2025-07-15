@@ -209,7 +209,6 @@
 						class="h-2 w-2 rounded-full transition-colors {index === currentPage
 							? 'bg-primary'
 							: 'bg-muted-foreground/30 hover:bg-muted-foreground/50'}"
-						aria-label={`Go to tip ${index + 1}: ${tip.title}`}
 						aria-current={index === currentPage ? 'page' : undefined}
 					></button>
 				{/each}
