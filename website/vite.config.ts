@@ -1,7 +1,13 @@
+import { defineConfig, loadEnv } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
-import { isoImport } from 'vite-plugin-iso-import';
 
-export default defineConfig({
-	plugins: [sveltekit(), isoImport()]
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
+    plugins: [sveltekit()],
+    define: {
+      'process.env': env,
+    },
+  };
 });
+
